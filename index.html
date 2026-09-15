@@ -223,7 +223,16 @@ const TEMPLATE = {
   sunday:   [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
   weekday:  [["9:30 AM", "2:00 PM"], ["5:00 PM", "Close"]],
 };
-const DEFAULT_NEEDS = { "Close": 4, "default": 2 };   // how many people before a slot stops being yellow
+/* How many people each shift wants = the number of blank lines that shift has on the paper sheet.
+   Counted off the 2026 sheet: weekday mornings and the Friday 2-5 have 4 lines; every Close and
+   every Saturday/Sunday shift has 5. Admin can change any of these on the site. */
+const DEFAULT_NEEDS = {
+  "7:00 PM–Close": 5, "5:00 PM–Close": 5,
+  "9:30 AM–2:00 PM": 4, "2:00 PM–5:00 PM": 4,
+  "9:30 AM–3:00 PM": 5, "3:00 PM–7:00 PM": 5,
+};
+const SHIFT_TYPES = Object.keys(DEFAULT_NEEDS);
+function shiftLabel(s) { return `${s[0]}–${s[1]}`; }
 
 /* ---- The fair rule: last Thursday of September, run 10 days through the second Saturday. ---- */
 function fairStart(year) {
@@ -323,7 +332,13 @@ function setLive(on) { $("#live").classList.toggle("on", on); $("#liveText").tex
 function showErr(m) { const e = $("#err"); e.textContent = m; e.hidden = false; }
 
 /* ---- Render ---- */
-function needsFor(shift) { return meta.needs?.[shift[1]] ?? meta.needs?.default ?? 2; }
+function needsFor(shift) {
+  const k = shiftLabel(shift), n = meta.needs?.[k];
+  if (n != null) return n;
+  // Older sheets stored {Close, default}; honour them if present, else the paper-sheet counts.
+  if (meta.needs?.Close != null || meta.needs?.default != null) return shift[1] === "Close" ? (meta.needs.Close ?? 5) : (meta.needs.default ?? 4);
+  return DEFAULT_NEEDS[k] ?? 4;
+}
 function render() {
   const today = new Date().toISOString().slice(0, 10);
   const wrap = $("#days"); wrap.innerHTML = "";
@@ -500,10 +515,17 @@ $("#adminOk").onclick = () => {
   else $("#adminIn").value = "";
 };
 $("#btnLock").onclick = () => db.collection("sheets").doc(String(YEAR)).set({ locked: !meta.locked }, { merge: true });
-$("#btnNeeds").onclick = () => {
-  const c = prompt("People needed on a CLOSE shift:", meta.needs?.Close ?? 4); if (c === null) return;
-  const d = prompt("People needed on every other shift:", meta.needs?.default ?? 2); if (d === null) return;
-  db.collection("sheets").doc(String(YEAR)).set({ needs: { Close: +c || 1, default: +d || 1 } }, { merge: true });
+$("#btnNeeds").onclick = async () => {
+  // One question per shift type, pre-filled with the current number. Cancel keeps what was there.
+  const needs = {};
+  for (const k of SHIFT_TYPES) {
+    const cur = needsFor(k.split("–"));
+    const v = prompt(`People needed on the ${k} shift:`, cur);
+    if (v === null) return;
+    needs[k] = Math.max(1, parseInt(v, 10) || cur);
+  }
+  try { await sheet().set({ needs }, { merge: true }); }
+  catch (err) { showErr("Could not save: " + err.message); }
 };
 /* The names already on the paper sheet when this went live (Sept 2026), so nobody re-signs.
    Shows only for 2026 and only while the online sheet is still empty; harmless afterwards. */

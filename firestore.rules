@@ -6,7 +6,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       // Only the lock flag, the needs map and the daily deposit totals can be written.
       allow write: if request.auth != null
-        && request.resource.data.keys().hasOnly(['locked', 'needs', 'totals']);
+        && request.resource.data.keys().hasOnly(['locked', 'needs', 'totals', 'startDate']);
 
       // Shift notes ("running late till 7:30") — anyone on the crew, 140 chars.
       match /notes/{id} {

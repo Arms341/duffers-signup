@@ -128,6 +128,8 @@
     <button class="btn" id="btnExport">Export roster (CSV)</button>
     <button class="btn" id="btnNeeds">Set people needed per shift</button>
     <button class="btn" id="btnPaper" hidden>Load the 2026 paper sheet</button>
+    <button class="btn" id="btnLastYear" hidden>Load 2025 daily totals</button>
+    <button class="btn" id="btnStart">Set opening Thursday</button>
   </div>
   <div class="days" id="days"></div>
 
@@ -223,7 +225,22 @@ const YEAR = (() => {
   const end = new Date(thisStart); end.setDate(end.getDate() + 24);
   return now > end ? now.getFullYear() + 1 : now.getFullYear();
 })();
-const DAYS = buildDays(YEAR);
+let DAYS = buildDays(YEAR);
+/* The fair sets its own dates (2025 ran Sept 18-27, 2026 Sept 24-Oct 3). The last-Thursday
+   rule is only the default; an admin can pin the real opening Thursday in Settings. */
+function applyStartDate(iso) {
+  if (!iso) return;
+  const [y, m, d] = iso.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  DAYS = [];
+  for (let i = 0; i < 10; i++) {
+    const dt = new Date(start); dt.setDate(start.getDate() + i);
+    const dow = dt.getDay();
+    DAYS.push({ date: dt, key: dt.toISOString().slice(0, 10),
+      shifts: i === 0 ? TEMPLATE.opening : dow === 5 ? TEMPLATE.friday : dow === 6 ? TEMPLATE.saturday : dow === 0 ? TEMPLATE.sunday : TEMPLATE.weekday });
+  }
+  $("#dates").textContent = `${fmtDay(DAYS[0].date)} – ${fmtDay(DAYS[9].date)}, ${YEAR}`;
+}
 let myName = localStorage.getItem("duffers.name") || "";
 let deviceId = localStorage.getItem("duffers.device") || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
 localStorage.setItem("duffers.device", deviceId);
@@ -263,6 +280,7 @@ async function start() {
     }, e => { showErr("Live updates lost: " + e.message); setLive(false); });
     db.collection("sheets").doc(String(YEAR)).onSnapshot(d => {
       meta = { locked: false, needs: DEFAULT_NEEDS, totals: {}, ...(d.exists ? d.data() : {}) };
+      applyStartDate(meta.startDate);
       render();
     });
     db.collection("sheets").doc(String(YEAR)).collection("notes").onSnapshot(snap => {
@@ -315,6 +333,7 @@ function render() {
     wrap.appendChild(el);
   });
   $("#btnPaper").hidden = !(isAdmin && YEAR === 2026 && signups.length === 0);
+  $("#btnLastYear").hidden = !(isAdmin && YEAR === 2026 && !Object.keys(prevTotals || {}).length);
   $("#shortCount").textContent = short;
   $("#totalCount").textContent = signups.length;
   $("#mineCount").textContent = mine + " shift" + (mine === 1 ? "" : "s");
@@ -482,6 +501,26 @@ $("#btnPaper").onclick = async () => {
   } catch (err) { showErr("Load stopped: " + err.message); }
 };
 function append_ok(m) { const e = $("#err"); e.textContent = m; e.hidden = false; e.style.background = "#e3f3e3"; e.style.borderColor = "#9bd09b"; }
+/* Last year's nightly totals, read off the Daily Cash Count sheets posted in the Duffers GroupMe
+   (2025-09-18 .. 09-27), with Scott Blount's next-morning recount corrections applied.
+   Sum $95,927 vs Scott's 9/29 wrap-up of $95,672 -- his final book had ~$255 of adjustment not visible. */
+const LAST_YEAR_2025 = [9302, 6137, 10711, 11557, 4990, 8857, 6240, 12314, 13116, 12703];
+$("#btnLastYear").onclick = async () => {
+  if (!confirm("Write the ten 2025 nightly totals into last year's sheet? They then show as LY on every day.")) return;
+  const totals = {};
+  LAST_YEAR_2025.forEach((a, i) => { totals[i] = { amount: a, by: "GroupMe cash sheets", src: "2025-09-18..27" }; });
+  try {
+    await db.collection("sheets").doc(String(YEAR - 1)).set({ totals, startDate: "2025-09-18" }, { merge: true });
+    prevTotals = totals; append_ok("2025 totals loaded — $" + LAST_YEAR_2025.reduce((a, b) => a + b, 0).toLocaleString() + " across 10 nights."); render();
+  } catch (err) { showErr("Load failed: " + err.message); }
+};
+$("#btnStart").onclick = async () => {
+  const cur = meta.startDate || DAYS[0].key;
+  const v = prompt("Opening Thursday of the fair (YYYY-MM-DD). Set this BEFORE anyone signs up — changing it later orphans existing sign-ups.", cur);
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+  if (new Date(v + "T12:00:00").getDay() !== 4 && !confirm(v + " is not a Thursday. Use it anyway?")) return;
+  try { await sheet().set({ startDate: v }, { merge: true }); } catch (err) { showErr("Could not save date: " + err.message); }
+};
 $("#btnExport").onclick = () => {
   const lines = ["Day,Shift,Name"];
   for (const day of DAYS) for (const s of day.shifts) {

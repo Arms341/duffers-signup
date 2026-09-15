@@ -94,7 +94,29 @@
   body.admin .admin-tools { display: flex; }
   .admin-tools .btn { background: var(--maroon); color: #fff; font-size: 13px; padding: 8px 12px; }
   .locked-banner { background: #333; color: #fff; text-align: center; padding: 6px; font-size: 13px; }
-  @media (max-width: 480px) { .days { grid-template-columns: 1fr; } header h1 { font-size: 16px; } }
+  @media (max-width: 480px) {
+    /* Phones: one column and bigger type everywhere. Most of the crew reads this on a phone
+       at a corndog stand, not at a desk. */
+    html, body { font-size: 18px; }
+    .days { grid-template-columns: 1fr; }
+    header h1 { font-size: 20px; }
+    header .sub { font-size: 15px; }
+    .me input { font-size: 18px; padding: 12px 14px; }
+    .me button, .btn { font-size: 17px; padding: 12px 16px; }
+    .notice { font-size: 16px; }
+    .stats { font-size: 15px; }
+    .tile .lbl { font-size: 12px; } .tile .val { font-size: 22px; }
+    .day h2 { font-size: 18px; padding: 10px 12px; }
+    .money { font-size: 14px; } .plus { width: 30px; height: 30px; line-height: 30px; font-size: 22px; }
+    .shift-head { font-size: 17px; padding: 10px 12px; } .shift-head .count { font-size: 14px; }
+    .names li { font-size: 18px; padding: 8px 0; } .names .x { font-size: 24px; }
+    .join { font-size: 18px; padding: 14px; }
+    .notes .n { font-size: 15px; } .notes .n .when { font-size: 12px; }
+    .notes input { font-size: 16px; padding: 10px 12px; } .notes button { font-size: 15px; padding: 10px 14px; }
+    .totals-table table { font-size: 15px; }
+    footer { font-size: 14px; } footer button { font-size: 15px; }
+    .locked-banner { font-size: 15px; }
+  }
 </style>
 </head>
 <body>

@@ -41,9 +41,9 @@
   .shift.needs .shift-head .count { color: var(--warn); font-weight: 600; }
   .shift.full .shift-head .count { color: var(--ok); font-weight: 600; }
   .names { list-style: none; margin: 0; padding: 4px 12px 8px; min-height: 30px; }
-  .names li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e3e3e3; }
+  .names li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e3e3e3; font-weight: 700; }
   .names li:last-child { border-bottom: 0; }
-  .names li.me { font-weight: 700; }
+  .names li.me { color: var(--maroon); }   /* your own name: bold like the rest, maroon so you can find it */
   .names .x { background: none; border: 0; color: #a33; font-size: 18px; padding: 0 6px; cursor: pointer; line-height: 1; }
   .join { width: calc(100% - 24px); margin: 0 12px 10px; padding: 10px; border-radius: 8px; border: 1px dashed var(--maroon);
     background: #fff; color: var(--maroon); font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -345,7 +345,7 @@ function render() {
       sh.className = "shift " + (n < need ? "needs" : "full");
       sh.innerHTML = `
         <div class="shift-head"><span>${s[0]} to ${s[1]}</span><span class="count">${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
-        <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("") || `<li style="color:#999;border:0">nobody yet</li>`}</ul>
+        <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("") || `<li style="color:#999;border:0;font-weight:400">nobody yet</li>`}</ul>
         <button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>
         ${isAdmin ? `<button class="join other" data-other="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}">+ Add someone else (admin)</button>` : ""}
         <div class="notes">

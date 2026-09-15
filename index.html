@@ -227,10 +227,14 @@ const TEMPLATE = {
    Counted off the 2026 sheet: weekday mornings and the Friday 2-5 have 4 lines; every Close and
    every Saturday/Sunday shift has 5. Admin can change any of these on the site. */
 const DEFAULT_NEEDS = {
-  "7:00 PM–Close": 5, "5:00 PM–Close": 5,
-  "9:30 AM–2:00 PM": 4, "2:00 PM–5:00 PM": 4,
-  "9:30 AM–3:00 PM": 5, "3:00 PM–7:00 PM": 5,
+  "7:00 PM–Close": 5, "5:00 PM–Close": 5,          // every evening shift: 5
+  "9:30 AM–2:00 PM": 4, "9:30 AM–3:00 PM": 4,      // every lunch shift: 4
+  "2:00 PM–5:00 PM": 4, "3:00 PM–7:00 PM": 4,      // midday: 4 ...
 };
+/* ... except: both Fridays' 2-5 get 3, and the first Saturday's 3-7 gets 5.
+   Keyed by day index (0 = opening Thursday) + shift label. Admin can override any single slot by
+   tapping its count while in admin mode. */
+const DEFAULT_SLOT_NEEDS = { "1|2:00 PM–5:00 PM": 3, "8|2:00 PM–5:00 PM": 3, "2|3:00 PM–7:00 PM": 5 };
 const SHIFT_TYPES = Object.keys(DEFAULT_NEEDS);
 function shiftLabel(s) { return `${s[0]}–${s[1]}`; }
 
@@ -282,7 +286,7 @@ let deviceId = localStorage.getItem("duffers.device") || (crypto.randomUUID ? cr
 localStorage.setItem("duffers.device", deviceId);
 let signups = [];          // [{id, slot, name, device, ts}]
 let notes = [];            // [{id, slot, name, text, ts}]
-let meta = { locked: false, needs: DEFAULT_NEEDS, totals: {} };   // totals: { "0".."9": {amount, by, ts, lastYear?} }
+let meta = { locked: false, needs: {}, totals: {} };   // totals: { "0".."9": {amount, by, ts, lastYear?} }
 let prevTotals = {};       // last year's sheet: { dayIndex: {amount} } — auto-carries forward
 let isAdmin = false, db, uid = null;
 
@@ -315,7 +319,7 @@ async function start() {
       setLive(true); render();
     }, e => { showErr("Live updates lost: " + e.message); setLive(false); });
     db.collection("sheets").doc(String(YEAR)).onSnapshot(d => {
-      meta = { locked: false, needs: DEFAULT_NEEDS, totals: {}, ...(d.exists ? d.data() : {}) };
+      meta = { locked: false, needs: {}, totals: {}, ...(d.exists ? d.data() : {}) };
       applyStartDate(meta.startDate);
       render();
     });
@@ -332,8 +336,14 @@ function setLive(on) { $("#live").classList.toggle("on", on); $("#liveText").tex
 function showErr(m) { const e = $("#err"); e.textContent = m; e.hidden = false; }
 
 /* ---- Render ---- */
-function needsFor(shift) {
-  const k = shiftLabel(shift), n = meta.needs?.[k];
+function needsFor(shift, di) {
+  const k = shiftLabel(shift);
+  if (di != null) {
+    const slotKey = `${di}|${k}`;
+    if (meta.needs?.[slotKey] != null) return meta.needs[slotKey];
+    if (meta.needs?.[k] == null && DEFAULT_SLOT_NEEDS[slotKey] != null) return DEFAULT_SLOT_NEEDS[slotKey];
+  }
+  const n = meta.needs?.[k];
   if (n != null) return n;
   // Older sheets stored {Close, default}; honour them if present, else the paper-sheet counts.
   if (meta.needs?.Close != null || meta.needs?.default != null) return shift[1] === "Close" ? (meta.needs.Close ?? 5) : (meta.needs.default ?? 4);
@@ -354,14 +364,14 @@ function render() {
     for (const s of day.shifts) {
       const id = slotId(day.key, s);
       const rows = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0));
-      const need = needsFor(s), n = rows.length;
+      const need = needsFor(s, di), n = rows.length;
       const meIn = rows.find(r => r.device === deviceId || (myName && r.name.toLowerCase() === myName.toLowerCase()));
       if (meIn) mine++;
       if (n < need) short++;
       const sh = document.createElement("div");
       sh.className = "shift " + (n < need ? "needs" : "full");
       sh.innerHTML = `
-        <div class="shift-head"><span>${s[0]} to ${s[1]}</span><span class="count">${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
+        <div class="shift-head"><span>${s[0]} to ${s[1]}</span><span class="count" ${isAdmin ? `data-needslot="${di}|${shiftLabel(s)}" title="Tap to change how many this one shift needs" style="cursor:pointer;text-decoration:underline dotted"` : ""}>${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
         <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("")}${
           /* Open slots stay on the page as blank lines, like the paper sheet: one per person still needed. */
           Array.from({ length: Math.max(0, need - n) }, () => `<li class="blank"></li>`).join("")}</ul>
@@ -457,6 +467,15 @@ document.addEventListener("click", async e => {
   }
   const plus = e.target.closest(".plus");
   if (plus) openMoney(+plus.dataset.day);
+  const cnt = e.target.closest("[data-needslot]");
+  if (cnt) {
+    const key = cnt.dataset.needslot, [di, label] = key.split("|");
+    const cur = needsFor(label.split("–"), +di);
+    const v = prompt(`People needed on ${fmtDay(DAYS[+di].date)} ${label} (this shift only):`, cur);
+    if (v === null) return;
+    try { await sheet().set({ needs: { [key]: Math.max(1, parseInt(v, 10) || cur) } }, { merge: true }); }
+    catch (err) { showErr("Could not save: " + err.message); }
+  }
 });
 /* Shift notes — anyone on the crew can add one ("running late till 7:30"). */
 document.addEventListener("submit", async e => {

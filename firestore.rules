@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One sheet per year: sheets/2026 (locked flag + people-needed), sheets/2026/signups/{id}
+    match /sheets/{year} {
+      allow read: if request.auth != null;
+      // Only the lock flag, the needs map and the daily deposit totals can be written.
+      allow write: if request.auth != null
+        && request.resource.data.keys().hasOnly(['locked', 'needs', 'totals']);
+
+      // Shift notes ("running late till 7:30") — anyone on the crew, 140 chars.
+      match /notes/{id} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 140
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.keys().hasOnly(['slot', 'name', 'text', 'device', 'uid', 'ts']);
+        allow delete: if request.auth != null;
+        allow update: if false;
+      }
+
+      match /signups/{id} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 40
+          && request.resource.data.slot is string
+          && request.resource.data.keys().hasOnly(['slot', 'name', 'device', 'uid', 'ts'])
+          && (!exists(/databases/$(database)/documents/sheets/$(year))
+              || get(/databases/$(database)/documents/sheets/$(year)).data.get('locked', false) != true);
+        // Anyone signed in may delete (admin removals, and a Shriner taking himself off from a
+        // different phone). Locking is enforced by the page, not the rules, so the chairman can
+        // still fix the sheet after lock.
+        allow delete: if request.auth != null;
+        allow update: if false;
+      }
+    }
+  }
+}

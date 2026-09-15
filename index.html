@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7a1f1f">
+<title>Duffers Corndog Booth Sign-Up</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRHVmZmVycyBTaWduLVVwIiwic2hvcnRfbmFtZSI6IkR1ZmZlcnMiLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZmZmZmZiIsInRoZW1lX2NvbG9yIjoiIzdhMWYxZiJ9">
+<style>
+  :root {
+    --maroon: #7a1f1f; --maroon-dark: #5c1616; --gold: #f3e39a; --gold-deep: #e6cf5c;
+    --ink: #1c1c1c; --muted: #666; --line: #d9d9d9; --bg: #f6f4ef; --card: #fff;
+    --ok: #2e7d32; --warn: #b26a00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { background: var(--maroon); color: #fff; padding: 14px 16px 10px; position: sticky; top: 0; z-index: 5;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .sub { font-size: 13px; opacity: .9; margin-top: 2px; }
+  .me { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .me input { flex: 1; min-width: 160px; padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+  .me button, .btn { padding: 10px 14px; border-radius: 8px; border: 0; background: var(--gold-deep); color: var(--ink);
+    font-weight: 600; font-size: 15px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); }
+  main { padding: 12px 12px 80px; max-width: 1100px; margin: 0 auto; }
+  .notice { background: var(--gold); border: 1px solid var(--gold-deep); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
+  .notice.err { background: #fde2e2; border-color: #e5a0a0; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .stats b { color: var(--ink); }
+  .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .day { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .day h2 { margin: 0; background: var(--maroon); color: #fff; font-size: 15px; padding: 8px 12px; }
+  .day h2 small { opacity: .85; font-weight: 400; margin-left: 6px; }
+  .day.today h2 { background: var(--maroon-dark); box-shadow: inset 0 0 0 2px var(--gold-deep); }
+  .shift { border-top: 1px solid var(--line); }
+  .shift-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #eceae4; font-size: 14px; }
+  .shift-head .count { font-size: 12px; color: var(--muted); }
+  .shift.needs .shift-head { background: var(--gold); }
+  .shift.needs .shift-head .count { color: var(--warn); font-weight: 600; }
+  .shift.full .shift-head .count { color: var(--ok); font-weight: 600; }
+  .names { list-style: none; margin: 0; padding: 4px 12px 8px; min-height: 30px; }
+  .names li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e3e3e3; }
+  .names li:last-child { border-bottom: 0; }
+  .names li.me { font-weight: 700; }
+  .names .x { background: none; border: 0; color: #a33; font-size: 18px; padding: 0 6px; cursor: pointer; line-height: 1; }
+  .join { width: calc(100% - 24px); margin: 0 12px 10px; padding: 10px; border-radius: 8px; border: 1px dashed var(--maroon);
+    background: #fff; color: var(--maroon); font-weight: 600; font-size: 15px; cursor: pointer; }
+  .join:disabled { opacity: .45; cursor: default; }
+  .join.in { border-style: solid; background: #f4eaea; }
+  .join.other { border-color: #888; color: #444; font-weight: 500; margin-top: -4px; }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--line);
+    padding: 8px 12px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  footer button { background: none; border: 0; color: var(--maroon); font-weight: 600; cursor: pointer; font-size: 12px; }
+  .live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #bbb; margin-right: 6px; }
+  .live.on { background: var(--ok); }
+  dialog { border: 0; border-radius: 12px; padding: 18px; width: min(92vw, 420px); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog h3 { margin: 0 0 8px; }
+  dialog input { width: 100%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; margin: 8px 0; }
+  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  /* notes under each shift */
+  .notes { border-top: 1px dashed var(--line); padding: 6px 12px 10px; background: #fbfaf7; }
+  .notes .n { font-size: 13px; color: #333; padding: 3px 0; }
+  .notes .n b { color: var(--maroon); font-weight: 600; }
+  .notes .n .when { color: #999; font-size: 11px; margin-left: 4px; }
+  .notes form { display: flex; gap: 6px; margin-top: 6px; }
+  .notes input { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; min-width: 0; }
+  .notes button { padding: 8px 12px; border: 0; border-radius: 8px; background: #eee; font-size: 13px; cursor: pointer; }
+  /* daily money line in each day header */
+  .day h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .money { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 400; white-space: nowrap; }
+  .money .ly { opacity: .8; }
+  .money .ty { font-weight: 700; color: var(--gold); }
+  .plus { width: 24px; height: 24px; border-radius: 50%; border: 0; background: var(--ok); color: #fff; font-size: 18px; line-height: 24px;
+    padding: 0; cursor: pointer; font-weight: 700; flex: none; }
+  /* totals strip at top + table at bottom */
+  .totals-top { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .tile .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
+  .tile .val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+  .tile .val.up { color: var(--ok); } .tile .val.down { color: #a33; }
+  .totals-table { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-top: 16px; overflow: hidden; }
+  .totals-table h2 { margin: 0; background: var(--maroon); color: #fff; font-size: 15px; padding: 8px 12px; }
+  .totals-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .totals-table th, .totals-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid #eee; }
+  .totals-table th:first-child, .totals-table td:first-child { text-align: left; }
+  .totals-table th { background: #eceae4; font-size: 12px; color: #444; }
+  .totals-table tr.sum td { font-weight: 700; background: var(--gold); border-top: 2px solid var(--gold-deep); }
+  .totals-table td.up { color: var(--ok); } .totals-table td.down { color: #a33; }
+  .totals-table td .by { display: block; font-size: 11px; color: #999; font-weight: 400; }
+  .admin-tools { display: none; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+  body.admin .admin-tools { display: flex; }
+  .admin-tools .btn { background: var(--maroon); color: #fff; font-size: 13px; padding: 8px 12px; }
+  .locked-banner { background: #333; color: #fff; text-align: center; padding: 6px; font-size: 13px; }
+  @media (max-width: 480px) { .days { grid-template-columns: 1fr; } header h1 { font-size: 16px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>South Plains Duffers — Corndog Booth</h1>
+  <div class="sub" id="dates">Loading…</div>
+  <div class="me">
+    <input id="myName" placeholder="Your name (as the crew knows you)" autocomplete="name" maxlength="40">
+    <button id="saveName">Save</button>
+  </div>
+</header>
+
+<div id="lockedBanner" class="locked-banner" hidden>Sign-ups are locked. Contact Branden for changes.</div>
+
+<main>
+  <div id="notice" class="notice">If you cannot work your scheduled shift, <b>it is your responsibility</b> to find coverage. Please fill in the <b>yellow</b> slots first.</div>
+  <div id="err" class="notice err" hidden></div>
+  <div class="totals-top">
+    <div class="tile"><div class="lbl" id="lyLbl">Last year</div><div class="val" id="lyTotal">$0</div></div>
+    <div class="tile"><div class="lbl">This year so far</div><div class="val" id="tyTotal">$0</div></div>
+    <div class="tile"><div class="lbl">vs. same days last yr</div><div class="val" id="diffTotal">–</div></div>
+  </div>
+  <div class="stats">
+    <span>Slots still short: <b id="shortCount">–</b></span>
+    <span>Total sign-ups: <b id="totalCount">–</b></span>
+    <span>You're on: <b id="mineCount">–</b></span>
+  </div>
+  <div class="admin-tools">
+    <button class="btn" id="btnLock">Lock / unlock sign-ups</button>
+    <button class="btn" id="btnExport">Export roster (CSV)</button>
+    <button class="btn" id="btnNeeds">Set people needed per shift</button>
+    <button class="btn" id="btnPaper" hidden>Load the 2026 paper sheet</button>
+  </div>
+  <div class="days" id="days"></div>
+
+  <section class="totals-table">
+    <h2>Daily deposits</h2>
+    <div style="overflow-x:auto"><table id="totalsTable"></table></div>
+  </section>
+</main>
+
+<dialog id="moneyDlg">
+  <h3 id="moneyTitle">Deposit</h3>
+  <p style="margin:0 0 4px;font-size:13px;color:#555">Enter after the bank deposit. Whole dollars are fine.</p>
+  <label style="font-size:13px">This year's deposit for the day<input id="tyIn" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$"></label>
+  <label style="font-size:13px" id="lyWrap">Last year's total for this day (if you know it)<input id="lyIn" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$"></label>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="moneyOk">Save</button></div>
+</dialog>
+
+<footer>
+  <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
+  <button id="btnAdmin">Admin</button>
+</footer>
+
+<dialog id="codeDlg">
+  <h3>Lodge code</h3>
+  <p style="margin:0;font-size:14px;color:#555">Ask Branden or the booth chairman if you don't have it.</p>
+  <input id="codeIn" placeholder="Code" autocapitalize="characters" autocomplete="off">
+  <div class="row"><button class="btn" id="codeOk">Enter</button></div>
+</dialog>
+
+<dialog id="adminDlg">
+  <h3>Admin code</h3>
+  <input id="adminIn" type="password" placeholder="Admin code" autocomplete="off">
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="adminCancel">Cancel</button><button class="btn" id="adminOk">Enter</button></div>
+</dialog>
+
+<!-- Firebase (compat build: no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============================================================
+   CONFIG — the only part you edit.
+   1. Firebase console → Project settings → "Your apps" → Web app → copy firebaseConfig here.
+   2. Pick the two codes. The lodge code gates the page for the crew; the admin code
+      unlocks lock/export/needs. Both are soft gates (this is a corndog booth, not a bank).
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBrp5AceFhQx6UicUYyQ5dSQ9MUPTeZ9_8",
+  authDomain: "duffers-signup.firebaseapp.com",
+  projectId: "duffers-signup",
+  storageBucket: "duffers-signup.firebasestorage.app",
+  messagingSenderId: "637713852918",
+  appId: "1:637713852918:web:f497bd898c7ebb56063fd7"
+};
+const LODGE_CODE = "0841";
+const ADMIN_CODE = "0399";
+
+/* Shift template, copied from the paper sheet. Day 1 is the opening Thursday.
+   "close" shifts are labelled that way on purpose — nobody knows the exact close. */
+const TEMPLATE = {
+  opening:  [["7:00 PM", "Close"]],                                        // first Thursday
+  friday:   [["9:30 AM", "2:00 PM"], ["2:00 PM", "5:00 PM"], ["5:00 PM", "Close"]],
+  saturday: [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
+  sunday:   [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
+  weekday:  [["9:30 AM", "2:00 PM"], ["5:00 PM", "Close"]],
+};
+const DEFAULT_NEEDS = { "Close": 4, "default": 2 };   // how many people before a slot stops being yellow
+
+/* ---- The fair rule: last Thursday of September, run 10 days through the second Saturday. ---- */
+function fairStart(year) {
+  const d = new Date(year, 8, 30);                 // Sept 30
+  while (d.getDay() !== 4) d.setDate(d.getDate() - 1);
+  return d;
+}
+function buildDays(year) {
+  const start = fairStart(year), days = [];
+  for (let i = 0; i < 10; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const dow = d.getDay();
+    let shifts = i === 0 ? TEMPLATE.opening
+      : dow === 5 ? TEMPLATE.friday : dow === 6 ? TEMPLATE.saturday : dow === 0 ? TEMPLATE.sunday : TEMPLATE.weekday;
+    days.push({ date: d, key: d.toISOString().slice(0, 10), shifts });
+  }
+  return days;
+}
+function fmtDay(d) { return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }); }
+function slotId(dayKey, s) { return `${dayKey}_${s[0]}-${s[1]}`.replace(/[\s:]/g, ""); }
+
+/* ---- State ---- */
+const YEAR = (() => {
+  // If the fair is more than ~2 weeks past, show next year's sheet.
+  const now = new Date(), thisStart = fairStart(now.getFullYear());
+  const end = new Date(thisStart); end.setDate(end.getDate() + 24);
+  return now > end ? now.getFullYear() + 1 : now.getFullYear();
+})();
+const DAYS = buildDays(YEAR);
+let myName = localStorage.getItem("duffers.name") || "";
+let deviceId = localStorage.getItem("duffers.device") || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+localStorage.setItem("duffers.device", deviceId);
+let signups = [];          // [{id, slot, name, device, ts}]
+let notes = [];            // [{id, slot, name, text, ts}]
+let meta = { locked: false, needs: DEFAULT_NEEDS, totals: {} };   // totals: { "0".."9": {amount, by, ts, lastYear?} }
+let prevTotals = {};       // last year's sheet: { dayIndex: {amount} } — auto-carries forward
+let isAdmin = false, db, uid = null;
+
+const $ = s => document.querySelector(s);
+$("#dates").textContent = `${fmtDay(DAYS[0].date)} – ${fmtDay(DAYS[9].date)}, ${YEAR}`;
+$("#myName").value = myName;
+
+/* ---- Lodge code gate (soft) ---- */
+function gate() {
+  if (localStorage.getItem("duffers.code") === LODGE_CODE) return start();
+  const dlg = $("#codeDlg"); dlg.showModal();
+  $("#codeOk").onclick = () => {
+    if ($("#codeIn").value.trim().toUpperCase() === LODGE_CODE.toUpperCase()) {
+      localStorage.setItem("duffers.code", LODGE_CODE); dlg.close(); start();
+    } else { $("#codeIn").value = ""; $("#codeIn").placeholder = "Nope — try again"; }
+  };
+}
+
+/* ---- Firebase ---- */
+async function start() {
+  if (firebaseConfig.apiKey === "PASTE_ME") { showErr("Firebase config has not been pasted into index.html yet."); render(); return; }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    const cred = await firebase.auth().signInAnonymously();
+    uid = cred.user.uid;
+    const col = db.collection("sheets").doc(String(YEAR)).collection("signups");
+    col.onSnapshot(snap => {
+      signups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setLive(true); render();
+    }, e => { showErr("Live updates lost: " + e.message); setLive(false); });
+    db.collection("sheets").doc(String(YEAR)).onSnapshot(d => {
+      meta = { locked: false, needs: DEFAULT_NEEDS, totals: {}, ...(d.exists ? d.data() : {}) };
+      render();
+    });
+    db.collection("sheets").doc(String(YEAR)).collection("notes").onSnapshot(snap => {
+      notes = snap.docs.map(d => ({ id: d.id, ...d.data() })); render();
+    });
+    // Last year's deposits carry forward automatically as this year's "last year" column.
+    db.collection("sheets").doc(String(YEAR - 1)).get().then(d => {
+      prevTotals = d.exists ? (d.data().totals || {}) : {}; render();
+    }).catch(() => {});
+  } catch (e) { showErr("Could not connect: " + e.message); }
+}
+function setLive(on) { $("#live").classList.toggle("on", on); $("#liveText").textContent = on ? "live — everyone sees the same sheet" : "offline"; }
+function showErr(m) { const e = $("#err"); e.textContent = m; e.hidden = false; }
+
+/* ---- Render ---- */
+function needsFor(shift) { return meta.needs?.[shift[1]] ?? meta.needs?.default ?? 2; }
+function render() {
+  const today = new Date().toISOString().slice(0, 10);
+  const wrap = $("#days"); wrap.innerHTML = "";
+  let short = 0, mine = 0;
+  $("#lockedBanner").hidden = !meta.locked;
+  DAYS.forEach((day, di) => {
+    const el = document.createElement("section");
+    el.className = "day" + (day.key === today ? " today" : "");
+    const ly = lastYearFor(di), ty = meta.totals?.[di]?.amount;
+    el.innerHTML = `<h2><span>${fmtDay(day.date)}${day.key === today ? "<small>today</small>" : ""}</span>
+      <span class="money"><span class="ly">LY ${ly == null ? "–" : money(ly)}</span><span class="ty">${ty == null ? "$ –" : money(ty)}</span>
+      <button class="plus" data-day="${di}" title="Enter this day's deposit">+</button></span></h2>`;
+    for (const s of day.shifts) {
+      const id = slotId(day.key, s);
+      const rows = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0));
+      const need = needsFor(s), n = rows.length;
+      const meIn = rows.find(r => r.device === deviceId || (myName && r.name.toLowerCase() === myName.toLowerCase()));
+      if (meIn) mine++;
+      if (n < need) short++;
+      const sh = document.createElement("div");
+      sh.className = "shift " + (n < need ? "needs" : "full");
+      sh.innerHTML = `
+        <div class="shift-head"><span>${s[0]} to ${s[1]}</span><span class="count">${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
+        <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("") || `<li style="color:#999;border:0">nobody yet</li>`}</ul>
+        <button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>
+        ${isAdmin ? `<button class="join other" data-other="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}">+ Add someone else (admin)</button>` : ""}
+        <div class="notes">
+          ${notes.filter(n => n.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0))
+            .map(n => `<div class="n"><b>${esc(n.name)}:</b> ${esc(n.text)}<span class="when">${when(n.ts)}</span>${(n.device === deviceId || isAdmin) ? ` <button class="x" data-note="${n.id}" title="Remove note">×</button>` : ""}</div>`).join("")}
+          <form data-slot="${id}"><input placeholder="Note for this shift (e.g. running late till 7:30)" maxlength="140"><button>Add</button></form>
+        </div>`;
+      el.appendChild(sh);
+    }
+    wrap.appendChild(el);
+  });
+  $("#btnPaper").hidden = !(isAdmin && YEAR === 2026 && signups.length === 0);
+  $("#shortCount").textContent = short;
+  $("#totalCount").textContent = signups.length;
+  $("#mineCount").textContent = mine + " shift" + (mine === 1 ? "" : "s");
+  renderTotals();
+}
+
+/* ---- Money ---- */
+function pct(t, l) { if (l == null || t == null || +l === 0) return null; return (+t - +l) / +l * 100; }
+function pctStr(p) { return (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(1) + "%"; }
+function money(n) { return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+function when(ts) { if (!ts?.seconds) return ""; const d = new Date(ts.seconds * 1000);
+  return d.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }); }
+/* Last year's number for day N: carried from last year's sheet, or typed in by hand the first year. */
+function lastYearFor(di) {
+  const carried = prevTotals?.[di]?.amount, typed = meta.totals?.[di]?.lastYear;
+  return carried ?? typed ?? null;
+}
+function renderTotals() {
+  let ly = 0, ty = 0, lySame = 0, anyLy = false, anyTy = false;
+  const rows = DAYS.map((day, di) => {
+    const l = lastYearFor(di), t = meta.totals?.[di]?.amount;
+    if (l != null) { ly += +l; anyLy = true; }
+    if (t != null) { ty += +t; anyTy = true; if (l != null) lySame += +l; }
+    const p = pct(t, l);
+    return `<tr><td>${fmtDay(day.date)}</td><td>${l == null ? "–" : money(l)}</td>
+      <td>${t == null ? "–" : money(t)}${meta.totals?.[di]?.by ? `<span class="by">by ${esc(meta.totals[di].by)}</span>` : ""}</td>
+      <td class="${p == null ? "" : p >= 0 ? "up" : "down"}">${p == null ? "–" : pctStr(p)}</td></tr>`;
+  });
+  const pAll = anyTy ? pct(ty, lySame) : null;
+  $("#totalsTable").innerHTML = `<tr><th>Day</th><th>Last year</th><th>This year</th><th>vs LY</th></tr>${rows.join("")}
+    <tr class="sum"><td>Total</td><td>${anyLy ? money(ly) : "–"}</td><td>${anyTy ? money(ty) : "–"}</td>
+    <td class="${pAll == null ? "" : pAll >= 0 ? "up" : "down"}">${pAll == null ? "–" : pctStr(pAll) + " (same days)"}</td></tr>`;
+  $("#lyLbl").textContent = `Last year (${YEAR - 1})`;
+  $("#lyTotal").textContent = anyLy ? money(ly) : "–";
+  $("#tyTotal").textContent = anyTy ? money(ty) : "$0";
+  const dEl = $("#diffTotal");
+  dEl.textContent = pAll == null ? "–" : pctStr(pAll);
+  dEl.className = "val " + (pAll == null ? "" : pAll >= 0 ? "up" : "down");
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ---- Actions ---- */
+$("#saveName").onclick = saveName;
+$("#myName").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); saveName(); } });
+function saveName() {
+  myName = $("#myName").value.trim().slice(0, 40);
+  localStorage.setItem("duffers.name", myName);
+  const b = $("#saveName");
+  b.textContent = myName ? "Saved ✓" : "Save";
+  setTimeout(() => { b.textContent = "Save"; }, 2500);
+  const n = $("#notice");
+  if (myName) n.innerHTML = `<b>Saved, ${esc(myName)}.</b> Now tap <b>+ Sign me up</b> on any shift you'll work. Yellow slots need people first.`;
+  render();
+}
+document.addEventListener("click", async e => {
+  const join = e.target.closest(".join");
+  if (join) {
+    if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
+    const slot = join.dataset.slot;
+    const already = signups.find(x => x.slot === slot && x.name.toLowerCase() === myName.toLowerCase());
+    if (already) { if (confirm(`Take yourself off ${join.dataset.label}?`)) await remove(already.id); return; }
+    join.disabled = true;
+    try { await addSignup(slot, myName); }
+    catch (err) { showErr("Sign-up failed: " + err.message); join.disabled = false; }
+  }
+  const other = e.target.closest(".join.other");
+  if (other) {
+    const name = (prompt(`Name to add to ${other.dataset.label}:`) || "").trim().slice(0, 40);
+    if (!name) return;
+    try { await addSignup(other.dataset.other, name); } catch (err) { showErr("Add failed: " + err.message); }
+    return;
+  }
+  const x = e.target.closest(".x");
+  if (x && x.dataset.id) { const r = signups.find(s => s.id === x.dataset.id); if (r && confirm(`Remove ${r.name}?`)) await remove(r.id); }
+  if (x && x.dataset.note) {
+    try { await sheet().collection("notes").doc(x.dataset.note).delete(); } catch (err) { showErr("Could not remove note: " + err.message); }
+  }
+  const plus = e.target.closest(".plus");
+  if (plus) openMoney(+plus.dataset.day);
+});
+/* Shift notes — anyone on the crew can add one ("running late till 7:30"). */
+document.addEventListener("submit", async e => {
+  const f = e.target.closest(".notes form"); if (!f) return;
+  e.preventDefault();
+  if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
+  const inp = f.querySelector("input"), text = inp.value.trim().slice(0, 140);
+  if (!text) return;
+  inp.disabled = true;
+  try {
+    await sheet().collection("notes").add({ slot: f.dataset.slot, name: myName, text, device: deviceId, uid, ts: firebase.firestore.FieldValue.serverTimestamp() });
+    inp.value = "";
+  } catch (err) { showErr("Note failed: " + err.message); }
+  inp.disabled = false;
+});
+function sheet() { return db.collection("sheets").doc(String(YEAR)); }
+
+/* Daily deposit — the green +. Whoever makes the bank run enters it the next day. */
+let moneyDay = null;
+function openMoney(di) {
+  if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
+  moneyDay = di;
+  $("#moneyTitle").textContent = `Deposit — ${fmtDay(DAYS[di].date)}`;
+  $("#tyIn").value = meta.totals?.[di]?.amount ?? "";
+  const carried = prevTotals?.[di]?.amount;
+  $("#lyWrap").hidden = carried != null;                 // already known from last year's sheet
+  $("#lyIn").value = carried ?? meta.totals?.[di]?.lastYear ?? "";
+  $("#moneyDlg").showModal();
+}
+$("#moneyCancel").onclick = () => $("#moneyDlg").close();
+$("#moneyOk").onclick = async () => {
+  const ty = $("#tyIn").value.trim(), ly = $("#lyIn").value.trim();
+  const FV = firebase.firestore.FieldValue, entry = {};
+  if (ty !== "") { entry.amount = +ty; entry.by = myName; entry.ts = FV.serverTimestamp(); }
+  else { entry.amount = FV.delete(); entry.by = FV.delete(); entry.ts = FV.delete(); }
+  if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
+  try {
+    await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
+    $("#moneyDlg").close();
+  } catch (err) { showErr("Could not save deposit: " + err.message); }
+};
+/* [device] is who can take the name off again from a phone: "admin" rows only the admin can remove. */
+function addSignup(slot, name, device = deviceId) {
+  return sheet().collection("signups").add({ slot, name, device, uid, ts: firebase.firestore.FieldValue.serverTimestamp() });
+}
+async function remove(id) {
+  try { await db.collection("sheets").doc(String(YEAR)).collection("signups").doc(id).delete(); }
+  catch (err) { showErr("Remove failed: " + err.message); }
+}
+
+/* ---- Admin ---- */
+$("#btnAdmin").onclick = () => { if (isAdmin) { isAdmin = false; document.body.classList.remove("admin"); render(); return; } $("#adminDlg").showModal(); };
+$("#adminCancel").onclick = () => $("#adminDlg").close();
+$("#adminOk").onclick = () => {
+  if ($("#adminIn").value === ADMIN_CODE) { isAdmin = true; document.body.classList.add("admin"); $("#adminDlg").close(); render(); }
+  else $("#adminIn").value = "";
+};
+$("#btnLock").onclick = () => db.collection("sheets").doc(String(YEAR)).set({ locked: !meta.locked }, { merge: true });
+$("#btnNeeds").onclick = () => {
+  const c = prompt("People needed on a CLOSE shift:", meta.needs?.Close ?? 4); if (c === null) return;
+  const d = prompt("People needed on every other shift:", meta.needs?.default ?? 2); if (d === null) return;
+  db.collection("sheets").doc(String(YEAR)).set({ needs: { Close: +c || 1, default: +d || 1 } }, { merge: true });
+};
+/* The names already on the paper sheet when this went live (Sept 2026), so nobody re-signs.
+   Shows only for 2026 and only while the online sheet is still empty; harmless afterwards. */
+const PAPER_2026 = {
+  "2026-09-24_700PM-Close": ["Turner", "JS", "Tony", "Branden", "Nate"],
+  "2026-09-25_500PM-Close": ["Paden Watson", "JS"],
+  "2026-09-26_930AM-300PM": ["Garland T"],
+  "2026-09-26_700PM-Close": ["Paden Watson", "Tony", "Nate", "Branden", "JS"],
+  "2026-09-27_930AM-300PM": ["Garland T"], "2026-09-27_300PM-700PM": ["Tony"], "2026-09-27_700PM-Close": ["Paden Watson", "Nate"],
+  "2026-09-28_930AM-200PM": ["Garland T"], "2026-09-28_500PM-Close": ["Paden Watson", "Nate"],
+  "2026-09-29_930AM-200PM": ["Clay"], "2026-09-29_500PM-Close": ["Matt"],
+  "2026-09-30_930AM-200PM": ["Branden", "Matt", "Clay"], "2026-09-30_500PM-Close": ["Branden", "Matt"],
+  "2026-10-01_930AM-200PM": ["Clay"], "2026-10-01_500PM-Close": ["Tony", "Garland T"],
+  "2026-10-02_930AM-200PM": ["Garland T"], "2026-10-02_500PM-Close": ["Tony", "Branden"],
+  "2026-10-03_930AM-300PM": ["Nate", "Branden"], "2026-10-03_300PM-700PM": ["Tony"],
+};
+$("#btnPaper").onclick = async () => {
+  const n = Object.values(PAPER_2026).reduce((a, v) => a + v.length, 0);
+  if (!confirm(`Add the ${n} names from the paper sheet? Do this once.`)) return;
+  $("#btnPaper").disabled = true;
+  try {
+    for (const [slot, names] of Object.entries(PAPER_2026)) for (const name of names) await addSignup(slot, name, "paper");
+    append_ok(`Loaded ${n} names from the paper sheet.`);
+  } catch (err) { showErr("Load stopped: " + err.message); }
+};
+function append_ok(m) { const e = $("#err"); e.textContent = m; e.hidden = false; e.style.background = "#e3f3e3"; e.style.borderColor = "#9bd09b"; }
+$("#btnExport").onclick = () => {
+  const lines = ["Day,Shift,Name"];
+  for (const day of DAYS) for (const s of day.shifts) {
+    const id = slotId(day.key, s);
+    const names = signups.filter(x => x.slot === id).map(x => x.name);
+    if (!names.length) lines.push(`"${fmtDay(day.date)}","${s[0]}–${s[1]}",""`);
+    for (const n of names) lines.push(`"${fmtDay(day.date)}","${s[0]}–${s[1]}","${n.replace(/"/g, '""')}"`);
+  }
+  lines.push("", "Day,Last year,This year,Entered by");
+  DAYS.forEach((day, di) => lines.push(`"${fmtDay(day.date)}",${lastYearFor(di) ?? ""},${meta.totals?.[di]?.amount ?? ""},"${(meta.totals?.[di]?.by || "").replace(/"/g, '""')}"`));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = `duffers_corndog_${YEAR}.csv`; a.click();
+};
+
+render(); gate();
+</script>
+</body>
+</html>

@@ -52,6 +52,9 @@
   .join:disabled { opacity: .45; cursor: default; }
   .join.in { border-style: solid; background: #f4eaea; }
   .join.other { border-color: #888; color: #444; font-weight: 500; margin-top: -4px; }
+  form.free { display: flex; gap: 6px; margin: 0 12px 10px; }
+  form.free input { flex: 1; min-width: 0; padding: 10px 12px; border: 1.5px dashed var(--maroon); border-radius: 8px; font-size: 16px; }
+  form.free button { padding: 10px 16px; border: 0; border-radius: 8px; background: var(--maroon); color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
   footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--line);
     padding: 8px 12px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   footer button { background: none; border: 0; color: var(--maroon); font-weight: 600; cursor: pointer; font-size: 12px; }
@@ -118,6 +121,8 @@
   #printSheet .pline.filler { background: #595959; }
   #printSheet .pnotice { background: #fff2b3; text-align: center; font-weight: 700; font-size: 8.5pt; padding: 10px 6px; line-height: 1.35; white-space: pre-line; }
   #printSheet .pfoot { color: #c00; font-weight: 700; text-align: center; font-size: 10pt; margin-top: 6px; letter-spacing: .3px; }
+  #printSheet .purl { text-align: center; font-size: 12pt; margin-top: 4px; letter-spacing: .2px; }
+  #printSheet .purl b { font-size: 13pt; }
   #printSheet .pmeta { text-align: right; font-size: 7.5pt; color: #444; margin-top: 3px; }
   @media (max-width: 480px) {
     /* Phones: one column and bigger type everywhere. Most of the crew reads this on a phone
@@ -242,8 +247,12 @@ const ADMIN_CODE = "0399";
 
 /* Shift template, copied from the paper sheet. Day 1 is the opening Thursday.
    "close" shifts are labelled that way on purpose — nobody knows the exact close. */
+/* A shift may carry a 3rd element with options: { key, title, free, need }.
+   free: true  = a plain "type a name" list (no Sign-me-up, no saved-name needed) -- used for the
+   opening-night volunteers who are not on the Duffers link. */
 const TEMPLATE = {
-  opening:  [["7:00 PM", "Close"]],                                        // first Thursday
+  opening:  [["7:00 PM", "Close"],
+             ["7:00 PM", "Close", { key: "vol", title: "Non-Theta Volunteers", free: true, need: 4 }]],  // first Thursday
   friday:   [["9:30 AM", "2:00 PM"], ["2:00 PM", "5:00 PM"], ["5:00 PM", "Close"]],
   saturday: [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
   sunday:   [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
@@ -282,7 +291,8 @@ function buildDays(year) {
   return days;
 }
 function fmtDay(d) { return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }); }
-function slotId(dayKey, s) { return `${dayKey}_${s[0]}-${s[1]}`.replace(/[\s:]/g, ""); }
+function slotId(dayKey, s) { return (`${dayKey}_${s[0]}-${s[1]}` + (s[2]?.key ? "_" + s[2].key : "")).replace(/[\s:]/g, ""); }
+function shiftTitle(s) { return s[2]?.title ? `${s[2].title} — ${s[0]} to ${s[1]}` : `${s[0]} to ${s[1]}`; }
 
 /* ---- State ---- */
 const YEAR = (() => {
@@ -364,6 +374,8 @@ function showErr(m) { const e = $("#err"); e.textContent = m; e.hidden = false; 
 /* ---- Render ---- */
 function needsFor(shift, di) {
   const k = shiftLabel(shift);
+  if (shift[2]?.need != null && meta.needs?.[`${di}|${k}|${shift[2].key}`] == null) return shift[2].need;
+  if (shift[2]?.key && meta.needs?.[`${di}|${k}|${shift[2].key}`] != null) return meta.needs[`${di}|${k}|${shift[2].key}`];
   if (di != null) {
     const slotKey = `${di}|${k}`;
     if (meta.needs?.[slotKey] != null) return meta.needs[slotKey];
@@ -397,12 +409,14 @@ function render() {
       const sh = document.createElement("div");
       sh.className = "shift " + (n < need ? "needs" : "full");
       sh.innerHTML = `
-        <div class="shift-head"><span>${s[0]} to ${s[1]}</span><span class="count" ${isAdmin ? `data-needslot="${di}|${shiftLabel(s)}" title="Tap to change how many this one shift needs" style="cursor:pointer;text-decoration:underline dotted"` : ""}>${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
+        <div class="shift-head"><span>${shiftTitle(s)}</span><span class="count" ${isAdmin ? `data-needslot="${di}|${shiftLabel(s)}" title="Tap to change how many this one shift needs" style="cursor:pointer;text-decoration:underline dotted"` : ""}>${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
         <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("")}${
           /* Open slots stay on the page as blank lines, like the paper sheet: one per person still needed. */
           Array.from({ length: Math.max(0, need - n) }, () => `<li class="blank"></li>`).join("")}</ul>
-        <button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>
-        ${isAdmin ? `<button class="join other" data-other="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}">+ Add someone else (admin)</button>` : ""}
+        ${s[2]?.free
+          ? `<form class="free" data-slot="${id}" ${meta.locked && !isAdmin ? "hidden" : ""}><input placeholder="Volunteer's name" maxlength="40" autocomplete="off"><button type="submit">Add</button></form>`
+          : `<button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>
+        ${isAdmin ? `<button class="join other" data-other="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}">+ Add someone else (admin)</button>` : ""}`}
         <div class="notes">
           ${notes.filter(n => n.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0))
             .map(n => `<div class="n"><b>${esc(n.name)}:</b> ${esc(n.text)}<span class="when">${when(n.ts)}</span>${(n.device === deviceId || isAdmin) ? ` <button class="x" data-note="${n.id}" title="Remove note">×</button>` : ""}</div>`).join("")}
@@ -505,6 +519,17 @@ document.addEventListener("click", async e => {
 });
 /* Shift notes — anyone on the crew can add one ("running late till 7:30"). */
 document.addEventListener("submit", async e => {
+  const ff = e.target.closest("form.free");
+  if (ff) {
+    e.preventDefault();
+    const inp = ff.querySelector("input"), name = inp.value.trim().slice(0, 40);
+    if (!name) return;
+    inp.disabled = true;
+    try { await addSignup(ff.dataset.slot, name); inp.value = ""; }
+    catch (err) { showErr("Could not add: " + err.message); }
+    inp.disabled = false;
+    return;
+  }
   const f = e.target.closest(".notes form"); if (!f) return;
   e.preventDefault();
   if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
@@ -634,7 +659,7 @@ YELLOW SPOTS</div>`; lines += 7; }
     for (const s of day.shifts) {
       const id = slotId(day.key, s), need = needsFor(s, di);
       const names = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0)).map(x => x.name);
-      html += `<div class="pshift">${s[0]} to ${s[1]}</div>`; lines++;
+      html += `<div class="pshift">${shiftTitle(s)}</div>`; lines++;
       const rows = Math.max(need, names.length);
       for (let i = 0; i < rows; i++) { html += `<div class="pline${names[i] ? "" : " open"}">${names[i] ? esc(names[i]) : ""}</div>`; lines++; }
     }
@@ -647,7 +672,8 @@ YELLOW SPOTS</div>`; lines += 7; }
   $("#printSheet").innerHTML = `<h1>SOUTH PLAINS DUFFERS CORNDOG BOOTH SCHEDULE ${YEAR}</h1>
     <div class="grid">${DAYS.map((d, di) => dayHtml(d, di, di < 5 ? max1 : max2)).join("")}</div>
     <div class="pfoot">PLEASE FILL IN ALL THE YELLOW SLOTS FIRST!!!!</div>
-    <div class="pmeta">Printed ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} — live copy at ${location.host}</div>`;
+    <div class="purl">Sign up online: <b>${location.host}</b></div>
+    <div class="pmeta">Printed ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} — the website is always current; this paper is not.</div>`;
 }
 $("#btnPrint").onclick = () => { buildPrintSheet(); setTimeout(() => window.print(), 50); };
 window.addEventListener("beforeprint", buildPrintSheet);   // Ctrl+P / Share > Print also get a fresh sheet
@@ -657,8 +683,8 @@ $("#btnExport").onclick = () => {
   for (const day of DAYS) for (const s of day.shifts) {
     const id = slotId(day.key, s);
     const names = signups.filter(x => x.slot === id).map(x => x.name);
-    if (!names.length) lines.push(`"${fmtDay(day.date)}","${s[0]}–${s[1]}",""`);
-    for (const n of names) lines.push(`"${fmtDay(day.date)}","${s[0]}–${s[1]}","${n.replace(/"/g, '""')}"`);
+    if (!names.length) lines.push(`"${fmtDay(day.date)}","${shiftTitle(s)}",""`);
+    for (const n of names) lines.push(`"${fmtDay(day.date)}","${shiftTitle(s)}","${n.replace(/"/g, '""')}"`);
   }
   lines.push("", "Day,Last year,This year,Entered by");
   DAYS.forEach((day, di) => lines.push(`"${fmtDay(day.date)}",${lastYearFor(di) ?? ""},${meta.totals?.[di]?.amount ?? ""},"${(meta.totals?.[di]?.by || "").replace(/"/g, '""')}"`));

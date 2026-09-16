@@ -327,7 +327,7 @@
   </div>
   <p class="cc-note" style="margin-top:8px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
   <div class="cc-err" id="ccErr" hidden></div>
-  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccShare" style="background:#e8e6df" hidden>Share</button><button class="btn" id="moneyOk">Save</button></div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn ghost" style="color:#a33;border-color:#a33" id="ccClear" hidden>Clear day</button><button class="btn" id="ccShare" style="background:#e8e6df" hidden>Share</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
 <dialog id="openDlg">
   <h3>Open shifts</h3>
@@ -918,7 +918,7 @@ function openMoney(di) {
   $("#lyWrap").hidden = carried != null;                 // already known from last year's sheet
   $("#lyIn").value = carried ?? e.lastYear ?? "";
   $("#ccErr").hidden = true;
-  $("#ccShare").hidden = e.amount == null;
+  $("#ccShare").hidden = e.amount == null; $("#ccClear").hidden = e.amount == null && !e.photo;
   photoState = { data: null, changed: false }; showPhoto();
   $("#ccPhotoNote").hidden = true;
   if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; $("#ccPhotoNote").hidden = false;
@@ -961,6 +961,18 @@ $("#moneyOk").onclick = async () => {
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
     $("#moneyDlg").close();
   } catch (err2) { showErr("Could not save the count: " + err2.message); }
+};
+
+/* Wipe a night's count (numbers, names, signatures, photo) after a confirm. */
+$("#ccClear").onclick = async () => {
+  if (!confirm(`Clear the whole count for ${fmtDay(DAYS[moneyDay].date)}? Numbers, signatures and the photo will be removed.`)) return;
+  const FV = firebase.firestore.FieldValue, entry = {};
+  for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
+  try {
+    await countsDoc(moneyDay).delete().catch(() => {});
+    await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
+    $("#moneyDlg").close();
+  } catch (err) { showErr("Could not clear: " + err.message); }
 };
 
 /* Share one night's count as a single picture (numbers, who counted, signatures, Square screen) through the

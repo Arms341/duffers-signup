@@ -161,28 +161,6 @@
   #photoDlg { width: min(96vw, 900px); padding: 10px; }
   #photoDlg img { width: 100%; height: auto; max-height: 82vh; object-fit: contain; display: block; }
   .totals-table td .by a { color: var(--maroon); font-weight: 600; text-decoration: none; }
-  #countPrint .cphoto { margin-top: 14px; page-break-inside: avoid; }
-  #countPrint .cphoto img { max-height: 3.2in; max-width: 100%; border: 1px solid #999; }
-  /* Printed copy of one day's count sheet (portrait, goes in the bank bag) */
-  #countPrint { display: none; }
-  @media print {
-    body.print-count > *:not(#countPrint) { display: none !important; }
-    body.print-count > #countPrint { display: block !important; }
-  }
-  #countPrint { page: countpage; font-family: Calibri, Arial, Helvetica, sans-serif; color: #000; font-size: 12pt; padding: 0.4in 0.6in; }
-  @page countpage { size: letter portrait; margin: 0.4in; }
-  #countPrint h1 { text-align: center; font-size: 15pt; margin: 0 0 14px; }
-  #countPrint .cl { display: grid; grid-template-columns: 1.4in 1fr 2in; align-items: center; margin: 0 0 14px; }
-  #countPrint .cl .box { border: 1.5px solid #000; height: 34px; line-height: 34px; padding: 0 8px; font-size: 14pt; text-align: right; font-family: Arial, sans-serif; }
-  #countPrint .sigs { margin: 26px 0 0; }
-  #countPrint .sg { display: grid; grid-template-columns: 1in 2.6in 1.1in 1fr; align-items: end; margin: 0 0 18px; }
-  #countPrint .sg .ln { border-bottom: 1px solid #000; height: 60px; position: relative; }
-  #countPrint .sg .ln img { position: absolute; left: 0; bottom: 0; height: 60px; max-width: 100%; }
-  #countPrint .sg .nm { border-bottom: 1px solid #000; height: 60px; line-height: 60px; padding-left: 6px; font-size: 14pt; }
-  #countPrint .instr { font-weight: 700; font-style: italic; margin: 6px 0 22px; }
-  #countPrint .ws { display: grid; grid-template-columns: 0.6in 3.4in; gap: 4px 8px; align-items: end; }
-  #countPrint .ws .v { border-bottom: 1px solid #000; height: 18px; font-family: Arial, sans-serif; }
-  #countPrint .ws .t { font-weight: 700; margin-top: 8px; }
   /* ---- PRINT SHEET: the paper layout. Hidden on screen; the only thing shown when printing. ---- */
   #printSheet { display: none; }
   @media print {
@@ -349,9 +327,8 @@
   </div>
   <p class="cc-note" style="margin-top:8px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
   <div class="cc-err" id="ccErr" hidden></div>
-  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccPrint" style="background:#e8e6df" hidden>Print</button><button class="btn" id="moneyOk">Save</button></div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
-<div id="countPrint"></div>
 <dialog id="openDlg">
   <h3>Open shifts</h3>
   <p style="margin:0 0 8px;font-size:13px;color:#555">Edit if you like, then Copy and paste it into the GroupMe.</p>
@@ -941,7 +918,6 @@ function openMoney(di) {
   $("#lyWrap").hidden = carried != null;                 // already known from last year's sheet
   $("#lyIn").value = carried ?? e.lastYear ?? "";
   $("#ccErr").hidden = true;
-  $("#ccPrint").hidden = e.amount == null;
   photoState = { data: null, changed: false }; showPhoto();
   $("#ccPhotoNote").hidden = true;
   if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; $("#ccPhotoNote").hidden = false;
@@ -986,35 +962,6 @@ $("#moneyOk").onclick = async () => {
   } catch (err2) { showErr("Could not save the count: " + err2.message); }
 };
 
-/* Printed copy of the count sheet — portrait, same layout as the paper form, signatures included. */
-function buildCountPrint(di) {
-  const e = meta.totals?.[di] || {}, d = DAYS[di].date;
-  const ds = `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
-  const m = v => v == null ? "" : money(v);
-  const line = (n, label, mid, v) => `<div class="cl"><span>${n} ${label}</span><span>${mid}</span><span class="box">${m(v)}</span></div>`;
-  const sig = (i) => `<div class="sg"><span>Signature</span><span class="ln">${e.sigs?.[i] ? `<img src="${e.sigs[i]}" alt="">` : ""}</span><span style="text-align:right;padding-right:6px">Printed Name</span><span class="nm">${esc(e.counters?.[i] || "")}</span></div>`;
-  $("#countPrint").innerHTML = `<h1>Daily Cash Count</h1>
-    <div style="margin:0 0 20px">Date: <span style="display:inline-block;border-bottom:1px solid #000;min-width:2in;padding:0 8px;font-family:Arial">${ds}</span></div>
-    ${line(1, "Total Cash Count", "", e.cash ?? e.amount)}
-    ${line(2, "Credit Card Sales", "", e.card)}
-    ${line(3, "Starting Bank", "", e.bank)}
-    ${line(4, "Total Sales", "Line 1 + Line 2 - Line 3 &nbsp;=", e.amount)}
-    <div class="sigs"><b>Counted &amp; Verified by 2 assigned Duffers:</b>${sig(0)}${sig(1)}</div>
-    <div class="instr">Put ALL cash and this completed sheet in bank bag.<br>Tomorrow's bag will have its own new bank in it.</div>
-    <div>Worksheet Area</div>
-    <div class="ws">${BILLS.map(b => `<span>${b}'s</span><span class="v">${e.counts?.[b] != null ? `${e.counts[b]} × $${b} = ` : ""}${m(e.bills?.[b])}</span>`).join("")}
-      <span class="t">Total</span><span class="v t">${m(e.cash ?? e.amount)}</span></div>
-    ${photoState.data ? `<div class="cphoto"><div style="font-size:9pt;color:#555;margin-bottom:4px">Square totals screen</div><img src="${photoState.data}" alt=""></div>` : ""}
-    <div style="margin-top:18px;font-size:9pt;color:#555">Entered in the Duffers sign-up app by ${esc(e.by || "")} · duffers-signup-app.vercel.app</div>`;
-}
-$("#ccPrint").onclick = () => {
-  buildCountPrint(moneyDay);
-  document.body.classList.add("print-count");
-  const done = () => { document.body.classList.remove("print-count"); window.removeEventListener("afterprint", done); };
-  window.addEventListener("afterprint", done);
-  setTimeout(() => window.print(), 50);
-  setTimeout(done, 60000);
-};
 /* [device] is who can take the name off again from a phone: "admin" rows only the admin can remove. */
 function addSignup(slot, name, device = deviceId) {
   return sheet().collection("signups").add({ slot, name, device, uid, ts: firebase.firestore.FieldValue.serverTimestamp() });

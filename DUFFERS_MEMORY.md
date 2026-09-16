@@ -52,11 +52,11 @@ headcounts, enters daily deposits, and locks the sheet.
   finger-signature canvases (blank signature = confirm). Stored on `totals[di]` as
   `{amount(=line 4), cash, card, bank, bills{1..100 $}, counts{1..100 bills}, counters[2], sigs[2 PNG data URLs ~8KB], by, ts}` —
   same year doc, no rules change. Totals table shows "cash · card · counted by A & B"; CSV has the split;
-  dialog "Print" button prints a portrait replica of the paper sheet with signatures for the bank bag.
+  (Count-sheet Print button was removed 09-16 — digital record is the record; the header Print is the schedule only.)
   **Square screen photo:** dialog has "Add photo of the Square screen" (camera/file); shrunk to ≤1000px JPEG
   (~50–150 KB) and stored in `sheets/{year}/counts/{di}` = `{photo, by, uid, ts}` — its own doc so the year
   doc stays small; year doc only gets `totals[di].photo = true`. Totals table shows a "📷 Square screen"
-  link that fetches on tap; print includes it. **Needs the `counts` rule pasted into Firebase console.**
+  link that fetches on tap. **Needs the `counts` rule pasted into Firebase console.**
   Found while testing: the 09/24/25 paper sheet's worksheet sums to 5,781 but line 1 was written 5,281 —
   the total (6,455) used 5,781. Exactly the arithmetic the app now does.
 

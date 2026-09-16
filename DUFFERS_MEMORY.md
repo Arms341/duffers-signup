@@ -93,6 +93,9 @@ name instructions · totals disclaimer · "Running late? Add a note" tip · **Da
 - **"Right now" card** (dark maroon, top of page, fair days only, refreshes every minute): current shift + names +
   "N open", and Up next; between shifts shows Up next / Then. Tap a row to jump to that shift. Volunteer block excluded.
 - **Clear day** button in the count dialog wipes a night (numbers, sigs, photo) after confirm.
+- **Home-screen guide** (`guide/ios-1..3.jpg` = Branden's real iPhone screenshots cropped with red circles;
+  `guide/and-1..3.jpg` = drawn Android mock-ups): nudge has "Show me how", footer has "📲 Add to home screen";
+  dialog with iPhone/Android tabs, auto-picks by user agent.
 - Branden said NO "need a sub" feature — don't build one.
 
 ## 6. Calendar

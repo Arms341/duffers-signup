@@ -42,6 +42,17 @@
   .a2hs .txt { flex: 1; min-width: 200px; }
   .a2hs .btn { font-size: 13px; padding: 8px 12px; }
   .a2hs .no { background: none; border: 0; color: #7a6a20; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+  /* Home-screen how-to */
+  #guideDlg { width: min(96vw, 520px); max-height: 92vh; overflow-y: auto; padding: 14px; }
+  .gtabs { display: flex; gap: 6px; margin: 0 0 10px; }
+  .gtabs button { flex: 1; padding: 10px; border-radius: 8px; border: 1.5px solid var(--maroon); background: #fff; color: var(--maroon); font-weight: 700; font-size: 15px; cursor: pointer; }
+  .gtabs button.on { background: var(--maroon); color: #fff; }
+  .gstep { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: start; margin: 0 0 14px; }
+  .gstep .n { width: 30px; height: 30px; border-radius: 50%; background: var(--gold-deep); color: var(--ink); font-weight: 800; text-align: center; line-height: 30px; }
+  .gstep p { margin: 4px 0 6px; font-size: 15px; }
+  .gstep img { width: 100%; border-radius: 8px; border: 1px solid #ddd; display: block; }
+  .gpane[hidden] { display: none; }
+  footer .glink { background: none; border: 0; color: var(--maroon); font-size: 13px; cursor: pointer; padding: 0 8px; font-weight: 600; }
   /* "Right now" card — only during the fair */
   .now-card { background: var(--maroon-dark); color: #fff; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; box-shadow: inset 0 0 0 2px var(--gold-deep); }
   .now-card .nrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 4px 0; }
@@ -250,7 +261,7 @@
 <div id="lockedBanner" class="locked-banner" hidden>Sign-ups are locked. Contact Branden for changes.</div>
 
 <main>
-  <div id="a2hs" class="a2hs"><span class="txt" id="a2hsText"></span><button class="btn" id="a2hsBtn" hidden>Install</button><button class="no" id="a2hsNo">Not now</button></div>
+  <div id="a2hs" class="a2hs"><span class="txt" id="a2hsText"></span><button class="btn" id="a2hsBtn" hidden>Install</button><button class="btn" id="a2hsHow">Show me how</button><button class="no" id="a2hsNo">Not now</button></div>
   <div id="nowCard" class="now-card" hidden></div>
   <div id="mineStrip" class="mine-strip" hidden></div>
   <div id="notice" class="notice">If you cannot work your scheduled shift, <b>it is your responsibility</b> to find coverage. Please fill in the <b>yellow</b> slots first.</div>
@@ -342,6 +353,22 @@
   <div class="cc-err" id="ccErr" hidden></div>
   <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn ghost" style="color:#a33;border-color:#a33" id="ccClear" hidden>Clear day</button><button class="btn" id="ccShare" style="background:#e8e6df" hidden>Share</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
+<dialog id="guideDlg">
+  <h3 style="margin-bottom:4px">Put Duffers on your home screen</h3>
+  <p style="margin:0 0 10px;font-size:14px;color:#555">Then it opens like an app — no typing the address or the code again.</p>
+  <div class="gtabs"><button id="gIos" class="on">iPhone / iPad</button><button id="gAnd">Android</button></div>
+  <div class="gpane" id="gPaneIos">
+    <div class="gstep"><span class="n">1</span><div><p>In Safari, tap the little <b>share box with the arrow</b> at the right end of the address bar.</p><img src="/guide/ios-1.jpg" alt=""></div></div>
+    <div class="gstep"><span class="n">2</span><div><p>Scroll the menu <b>down</b> (tap <b>View More</b> if you see it) until you find <b>Add to Home Screen</b>. Tap it.</p><img src="/guide/ios-2.jpg" alt=""></div></div>
+    <div class="gstep"><span class="n">3</span><div><p>Tap <b>Add</b> in the top right. The corndog icon is now on your home screen.</p><img src="/guide/ios-3.jpg" alt=""></div></div>
+  </div>
+  <div class="gpane" id="gPaneAnd" hidden>
+    <div class="gstep"><span class="n">1</span><div><p>In Chrome, tap the <b>three dots</b> at the right end of the address bar.</p><img src="/guide/and-1.jpg" alt=""></div></div>
+    <div class="gstep"><span class="n">2</span><div><p>Tap <b>Add to Home screen</b> (some phones say <b>Install app</b>).</p><img src="/guide/and-2.jpg" alt=""></div></div>
+    <div class="gstep"><span class="n">3</span><div><p>Tap <b>Add</b> (or <b>Install</b>). The corndog icon is now on your home screen.</p><img src="/guide/and-3.jpg" alt=""></div></div>
+  </div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="guideClose">Close</button></div>
+</dialog>
 <dialog id="openDlg">
   <h3>Open shifts</h3>
   <p style="margin:0 0 8px;font-size:13px;color:#555">Edit if you like, then Copy and paste it into the GroupMe.</p>
@@ -352,7 +379,7 @@
 
 <footer>
   <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
-  <button id="btnAdmin">Admin</button>
+  <span><button class="glink" id="btnGuide">📲 Add to home screen</button><button id="btnAdmin">Admin</button></span>
 </footer>
 
 <div id="printSheet"></div>
@@ -687,13 +714,22 @@ function showA2hs() {
   const phone = /iPhone|iPad|Android/i.test(navigator.userAgent);
   let dismissed = false; try { dismissed = localStorage.getItem("duffers.a2hs") === "no"; } catch (e) {}
   if (standalone || !phone || dismissed) return;
-  const ios = /iPhone|iPad/i.test(navigator.userAgent);
-  $("#a2hsText").innerHTML = ios
-    ? "Put this on your home screen: tap <b>Share</b> (the box with the arrow) → <b>Add to Home Screen</b>. Then it opens like an app."
-    : "Put this on your home screen: tap <b>⋮</b> → <b>Add to Home screen</b>. Then it opens like an app.";
+  $("#a2hsText").innerHTML = "<b>Put this on your home screen</b> so it opens like an app.";
   $("#a2hs").classList.add("show");
 }
 $("#a2hsBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice; if (r.outcome === "accepted") $("#a2hs").classList.remove("show"); };
+function openGuide() {
+  const ios = /iPhone|iPad/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  guideTab(ios ? "ios" : "and");
+  $("#guideDlg").showModal();
+}
+function guideTab(which) {
+  $("#gIos").classList.toggle("on", which === "ios"); $("#gAnd").classList.toggle("on", which === "and");
+  $("#gPaneIos").hidden = which !== "ios"; $("#gPaneAnd").hidden = which !== "and";
+}
+$("#gIos").onclick = () => guideTab("ios"); $("#gAnd").onclick = () => guideTab("and");
+$("#a2hsHow").onclick = openGuide; $("#btnGuide").onclick = openGuide;
+$("#guideClose").onclick = () => $("#guideDlg").close();
 $("#a2hsNo").onclick = () => { try { localStorage.setItem("duffers.a2hs", "no"); } catch (e) {} $("#a2hs").classList.remove("show"); };
 
 /* ---- Money ---- */

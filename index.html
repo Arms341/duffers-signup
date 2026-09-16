@@ -101,6 +101,9 @@
   body.admin .admin-tools { display: flex; }
   .admin-tools .btn { background: var(--maroon); color: #fff; font-size: 13px; padding: 8px 12px; }
   .locked-banner { background: #333; color: #fff; text-align: center; padding: 6px; font-size: 13px; }
+  /* Until the lodge code is entered, the sheet does not exist on the page at all. */
+  body.locked > header, body.locked > main, body.locked > footer, body.locked > #lockedBanner { display: none !important; }
+  body.locked { background: var(--maroon); }
   /* ---- PRINT SHEET: the paper layout. Hidden on screen; the only thing shown when printing. ---- */
   #printSheet { display: none; }
   @media print {
@@ -154,7 +157,7 @@
   }
 </style>
 </head>
-<body>
+<body class="locked">
 
 <header>
   <h1>South Plains Duffers — Corndog Booth</h1>
@@ -335,13 +338,25 @@ $("#myName").value = myName;
 
 /* ---- Lodge code gate (soft) ---- */
 function gate() {
-  if (localStorage.getItem("duffers.code") === LODGE_CODE) return start();
-  const dlg = $("#codeDlg"); dlg.showModal();
-  $("#codeOk").onclick = () => {
-    if ($("#codeIn").value.trim().toUpperCase() === LODGE_CODE.toUpperCase()) {
-      localStorage.setItem("duffers.code", LODGE_CODE); dlg.close(); start();
-    } else { $("#codeIn").value = ""; $("#codeIn").placeholder = "Nope — try again"; }
+  let ok = false;
+  try { ok = localStorage.getItem("duffers.code") === LODGE_CODE; } catch (e) {}
+  if (ok) { document.body.classList.remove("locked"); return start(); }
+  // Nothing behind the code box until it is answered: the sheet is hidden, Escape/back-swipe
+  // can't dismiss the box, and if it somehow closes it comes straight back.
+  document.body.classList.add("locked");
+  const dlg = $("#codeDlg"), inp = $("#codeIn");
+  const open = () => { if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute("open", ""); } inp.focus(); } };
+  dlg.addEventListener("cancel", e => e.preventDefault());
+  dlg.addEventListener("close", () => { if (document.body.classList.contains("locked")) setTimeout(open, 0); });
+  const tryCode = () => {
+    if (inp.value.trim().toUpperCase() === LODGE_CODE.toUpperCase()) {
+      try { localStorage.setItem("duffers.code", LODGE_CODE); } catch (e) {}
+      document.body.classList.remove("locked"); dlg.close(); start();
+    } else { inp.value = ""; inp.placeholder = "Nope — try again"; }
   };
+  $("#codeOk").onclick = tryCode;
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); tryCode(); } });
+  open();
 }
 
 /* ---- Firebase ---- */

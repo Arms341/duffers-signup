@@ -24,6 +24,8 @@
   .me button, .btn { padding: 10px 14px; border-radius: 8px; border: 0; background: var(--gold-deep); color: var(--ink);
     font-weight: 600; font-size: 15px; cursor: pointer; }
   .btn.ghost { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.8); }
+  .howto { margin-top: 8px; font-size: 13px; line-height: 1.35; color: #f6e7c1; }
+  .howto b { color: #fff; }
   main { padding: 12px 12px 80px; max-width: 1100px; margin: 0 auto; }
   .notice { background: var(--gold); border: 1px solid var(--gold-deep); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
   .notice.err { background: #fde2e2; border-color: #e5a0a0; }
@@ -141,6 +143,7 @@
     .me input { font-size: 18px; padding: 12px 14px; }
     .me button, .btn { font-size: 17px; padding: 12px 16px; }
     .notice { font-size: 16px; }
+    .howto { font-size: 15px; }
     .stats { font-size: 15px; }
     .tile .lbl { font-size: 12px; } .tile .val { font-size: 22px; }
     .day h2 { font-size: 18px; padding: 10px 12px; }
@@ -168,8 +171,11 @@
     <input id="myName" placeholder="Your name (as the crew knows you)" autocomplete="name" maxlength="40">
     <button id="saveName">Save</button>
     <button id="btnPrint" class="btn ghost" title="Print the sheet the way the paper looks">🖨 Print</button>
-    <button id="btnCal" class="btn ghost" title="Put the shifts you signed up for on your phone's calendar">📅 My shifts</button>
+    <button id="btnCal" class="btn ghost" title="Put the shifts you signed up for on your phone's calendar">📅 Save My Shifts To My Calendar</button>
   </div>
+  <div class="howto"><b>Your name:</b> if you're already on the sheet, type it <b>exactly</b> the way it's written there
+    (the sheet says <i>Paden Watson</i>? type <i>Paden Watson</i>, not <i>Paden</i>). That's how the app knows which shifts are yours.
+    New here? Type your name the way the crew knows you, then <b>Save</b>.</div>
 </header>
 
 <div id="lockedBanner" class="locked-banner" hidden>Sign-ups are locked. Contact Branden for changes.</div>

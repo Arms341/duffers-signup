@@ -1310,13 +1310,17 @@ $("#btnPrint").onclick = () => {
     append_ok("Opening the sheet in Safari to print — the home-screen app can't print on iPhone.");
     return;
   }
-  buildPrintSheet(); setTimeout(() => window.print(), 50);
+  buildPrintSheet(); window.print();   // synchronous: Safari only opens the print sheet inside a tap
 };
 let autoPrinted = false;
 function maybeAutoPrint() {
   if (autoPrinted || !/[?&]print=1/.test(location.search) || !signups.length) return;
   autoPrinted = true; history.replaceState(null, "", "/");
-  setTimeout(() => { buildPrintSheet(); window.print(); }, 400);
+  // Safari won't open the print sheet without a tap, so ask for one.
+  const e = $("#err"); e.innerHTML = `<b>Ready to print.</b> <button class="btn" id="printNow" style="margin-left:8px">🖨 Print the sheet</button>`;
+  e.hidden = false; e.style.background = "#e3f3e3"; e.style.borderColor = "#9bd09b";
+  $("#printNow").onclick = () => { buildPrintSheet(); window.print(); };
+  e.scrollIntoView({ block: "start" });
 }
 window.addEventListener("beforeprint", buildPrintSheet);   // Ctrl+P / Share > Print also get a fresh sheet
 

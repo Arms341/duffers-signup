@@ -123,11 +123,11 @@
   #printSheet .pdate { background: #ff6600; font-weight: 700; font-style: italic; font-size: 9.5pt; height: var(--L); line-height: var(--L); padding: 0 4px; border-bottom: 1px solid #000; white-space: nowrap; overflow: hidden; }
   #printSheet .pshift { background: #bfbfbf; font-weight: 700; font-size: 9.5pt; height: var(--L); line-height: 15px; padding: 0 4px; border-top: 1px solid #000; border-bottom: 1px solid #000; white-space: nowrap; overflow: hidden; }
   #printSheet .pshift.small { font-size: 8.5pt; }
-  #printSheet .pline { background: #ffff00; height: var(--L); line-height: var(--L); border-bottom: 1px solid #8c8c8c; padding: 0 4px; font-size: 10pt; font-weight: 700; white-space: nowrap; overflow: hidden; }
-  #printSheet .pline.open { background: #ffff00; }
+  #printSheet .pline { background: #fff45c; height: var(--L); line-height: var(--L); border-bottom: 1px solid #8c8c8c; padding: 0 4px; font-size: 10pt; font-weight: 700; white-space: nowrap; overflow: hidden; }
+  #printSheet .pline.open { background: #fff45c; }
   #printSheet .pline.filler { background: #595959; border-bottom-color: #3d3d3d; }
   #printSheet .pline.filler.blue { background: #bdd7ee; border-bottom-color: #8c8c8c; }
-  #printSheet .pnotice { background: #ffff00; text-align: center; font-weight: 700; font-size: 9.5pt; height: calc(var(--L) * 7); padding: 0 6px; line-height: var(--L); white-space: pre-line; }
+  #printSheet .pnotice { background: #fff45c; text-align: center; font-weight: 700; font-size: 9.5pt; height: calc(var(--L) * 7); padding: 0 6px; line-height: var(--L); white-space: pre-line; }
   #printSheet .pfoot { color: #f00; font-weight: 700; text-align: center; font-size: 10.5pt; margin-top: 4px; border: 1.5px solid #000; border-top: 0; padding: 3px; background: #fff; }
   #printSheet .purl { text-align: center; font-size: 12pt; margin-top: 6px; }
   #printSheet .purl b { font-size: 13pt; }
@@ -278,7 +278,7 @@ const DEFAULT_NEEDS = {
 /* ... except: both Fridays' 2-5 get 3, and the first Saturday's 3-7 gets 5.
    Keyed by day index (0 = opening Thursday) + shift label. Admin can override any single slot by
    tapping its count while in admin mode. */
-const DEFAULT_SLOT_NEEDS = { "1|2:00 PM–5:00 PM": 3, "8|2:00 PM–5:00 PM": 3, "2|3:00 PM–7:00 PM": 5 };
+const DEFAULT_SLOT_NEEDS = { "1|2:00 PM–5:00 PM": 3, "8|2:00 PM–5:00 PM": 3, "2|3:00 PM–7:00 PM": 5, "3|3:00 PM–7:00 PM": 5 };
 const SHIFT_TYPES = Object.keys(DEFAULT_NEEDS);
 function shiftLabel(s) { return `${s[0]}–${s[1]}`; }
 
@@ -702,13 +702,14 @@ function buildPrintSheet() {
   const rowsHtml = [parts.slice(0, 5), parts.slice(5)].map((row, ri) => {
     // Like the 2025 sheet: closing shifts that start at the same TIME line up with each other
     // (all the 5 PM closes on one line, all the 7 PM closes on another). Thursday stands alone.
+    // ... and the groups span BOTH rows, so Monday's 5 PM block matches Tue-Thu's exactly.
     const key = p => p.di === 0 ? "thu" : shiftLabel(p.day.shifts[p.day.shifts.length - 1]);
-    const groupTop = p => Math.max(...row.filter(q => key(q) === key(p)).map(q => q.topLines));
+    const groupTop = p => Math.max(...parts.filter(q => key(q) === key(p)).map(q => q.topLines));
     const total = p => groupTop(p) + p.last.lines;
     const maxTotal = Math.max(...row.map(total));
     return `<div class="prow${ri ? " second" : ""}">` + row.map(p => `<div class="pday"><div class="pdate">${
         p.day.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${p.day.date.toLocaleDateString("en-US", { weekday: "long" })}</div>${
-        p.top}${filler(groupTop(p) - p.topLines, true)}${p.last.html}${filler(maxTotal - total(p), false)}</div>`).join("") + `</div>`;
+        p.top}${filler(groupTop(p) - p.topLines, false)}${p.last.html}${filler(maxTotal - total(p), false)}</div>`).join("") + `</div>`;
   }).join(`<div class="pgap"></div>`);
   $("#printSheet").innerHTML = `<h1>SOUTH PLAINS DUFFERS CORNDOG BOOTH SCHEDULE ${YEAR}</h1>
     ${rowsHtml}

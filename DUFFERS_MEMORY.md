@@ -106,7 +106,7 @@ name instructions · totals disclaimer · "Running late? Add a note" tip · **Da
   VTIMEZONE for America/Chicago and a 2-hour alarm. Verified live returning Branden's 6 shifts.
 - **Name matching is exact (case-insensitive).** The page tells people to type their name exactly as it
   already appears on the sheet, or the calendar / shift count won't find them.
-- iPhone home-screen (standalone) apps cannot call window.print — Print button there opens Safari at `/?print=1`, which auto-prints once signups load (09-16).
+- **Print on phones/tablets** (the president asked first thing): `sheetModel()` feeds both the HTML print layout (computers → window.print) and `drawSheet()` (3300×2550 canvas PNG of the same paper sheet) → `navigator.share` so the iOS/Android share sheet offers Print / AirDrop / Save / Messages — works from the home-screen app too. iOS standalone cannot window.print and Safari blocks repeat print() calls, hence this route (09-16).
 - Known limits: classic Outlook with a Gmail IMAP account can't add a URL calendar (not our bug); Google
   Calendar on iPhone must be subscribed via Google on a computer, then it shows on the phone.
 

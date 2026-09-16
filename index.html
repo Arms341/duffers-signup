@@ -237,7 +237,9 @@
     .join { font-size: 18px; padding: 14px; }
     .notes .n { font-size: 15px; } .notes .n .when { font-size: 12px; }
     .notes input { font-size: 16px; padding: 10px 12px; } .notes button { font-size: 15px; padding: 10px 14px; }
-    footer { font-size: 14px; } footer button { font-size: 15px; }
+    footer { font-size: 13px; flex-wrap: wrap; } footer button { font-size: 14px; }
+    footer > span:last-child { display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+    footer #liveText { display: none; }   /* the green dot says it; the words don't fit next to the links */
     .locked-banner { font-size: 15px; }
   }
 </style>
@@ -542,7 +544,7 @@ async function start() {
     const col = db.collection("sheets").doc(String(YEAR)).collection("signups");
     col.onSnapshot(snap => {
       signups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setLive(true); render(); maybeAutoPrint();
+      setLive(true); render();
     }, e => { showErr("Live updates lost: " + e.message); setLive(false); });
     db.collection("sheets").doc(String(YEAR)).onSnapshot(d => {
       meta = { locked: false, needs: {}, totals: {}, ...(d.exists ? d.data() : {}) };
@@ -1206,43 +1208,111 @@ $("#btnStart").onclick = async () => {
 /* ---- The paper sheet, rebuilt from live data, for the print dialog. Anyone can print. ----
    Same geometry as the photo: five day columns per row, two rows; orange date bar; grey shift bar;
    one line per person needed -- names filled in, open lines yellow; grey filler squares the columns. */
-function buildPrintSheet() {
-  // Each day = [top part ...][last shift]. Within a row of five days, the grey filler goes ABOVE the
-  // last shift so every closing bar sits on the same line (like the paper), then below it to square off.
+/* The paper sheet as data: two rows of five days, each a list of cells. Both the HTML print layout
+   (computers) and the drawn picture (phones -> share sheet -> Print/AirDrop/Save) come from this. */
+function sheetModel() {
   const shiftBlock = (day, di, s) => {
     const id = slotId(day.key, s), need = needsFor(s, di);
     const names = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0)).map(x => x.name);
     const rows = Math.max(need, names.length);
-    // In the column width, the volunteer bar keeps its title and drops the (identical) times.
-    let html = s[2]?.title ? `<div class="pshift small">${esc(s[2].title)}</div>` : `<div class="pshift">${s[0]} to ${s[1]}</div>`;
-    for (let i = 0; i < rows; i++) html += `<div class="pline${names[i] ? "" : " open"}">${names[i] ? esc(names[i]) : ""}</div>`;
-    return { html, lines: 1 + rows };
+    const cells = [s[2]?.title ? { k: "shift", text: s[2].title, small: true } : { k: "shift", text: `${s[0]} to ${s[1]}` }];
+    for (let i = 0; i < rows; i++) cells.push({ k: "line", text: names[i] || "" });
+    return cells;
   };
   const parts = DAYS.map((day, di) => {
-    let top = "", topLines = 0;
-    if (di === 0) { top += `<div class="pnotice">If you cannot work your\nSCHEDULED SHIFT,\nIT IS YOUR\nRESPONSIBILITY\n\nPlease fill in ALL\nYELLOW SPOTS</div>`; topLines += 7; }
+    let top = [];
+    if (di === 0) top.push({ k: "notice", text: "If you cannot work your\nSCHEDULED SHIFT,\nIT IS YOUR\nRESPONSIBILITY\n\nPlease fill in ALL\nYELLOW SPOTS", lines: 7 });
     const blocks = day.shifts.map(s => shiftBlock(day, di, s));
     const last = blocks.pop();
-    for (const b of blocks) { top += b.html; topLines += b.lines; }
-    return { day, di, top, topLines, last };
+    for (const b of blocks) top.push(...b);
+    const count = c => c.reduce((a, x) => a + (x.lines || 1), 0);
+    return { day, di, top, topLines: count(top), last, lastLines: count(last) };
   });
-  const filler = (n, blueFirst) => Array.from({ length: Math.max(0, n) }, (_, i) => `<div class="pline filler${blueFirst && i === 0 ? " blue" : ""}"></div>`).join("");
-  const rowsHtml = [parts.slice(0, 5), parts.slice(5)].map((row, ri) => {
-    // Like the 2025 sheet: closing shifts that start at the same TIME line up with each other
-    // (all the 5 PM closes on one line, all the 7 PM closes on another). Thursday stands alone.
-    // ... and the groups span BOTH rows, so Monday's 5 PM block matches Tue-Thu's exactly.
-    const key = p => p.di === 0 ? "thu" : shiftLabel(p.day.shifts[p.day.shifts.length - 1]);
-    const groupTop = p => Math.max(...parts.filter(q => key(q) === key(p)).map(q => q.topLines));
-    const total = p => groupTop(p) + p.last.lines;
+  const filler = n => Array.from({ length: Math.max(0, n) }, () => ({ k: "filler" }));
+  const key = p => p.di === 0 ? "thu" : shiftLabel(p.day.shifts[p.day.shifts.length - 1]);
+  const groupTop = p => Math.max(...parts.filter(q => key(q) === key(p)).map(q => q.topLines));
+  const total = p => groupTop(p) + p.lastLines;
+  return [parts.slice(0, 5), parts.slice(5)].map(row => {
     const maxTotal = Math.max(...row.map(total));
-    return `<div class="prow${ri ? " second" : ""}">` + row.map(p => `<div class="pday"><div class="pdate">${
-        p.day.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${p.day.date.toLocaleDateString("en-US", { weekday: "long" })}</div>${
-        p.top}${filler(groupTop(p) - p.topLines, false)}${p.last.html}${filler(maxTotal - total(p), false)}</div>`).join("") + `</div>`;
-  }).join(`<div class="pgap"></div>`);
+    return row.map(p => ({
+      date: `${p.day.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${p.day.date.toLocaleDateString("en-US", { weekday: "long" })}`,
+      cells: [...p.top, ...filler(groupTop(p) - p.topLines), ...p.last, ...filler(maxTotal - total(p))],
+      lines: 1 + maxTotal,
+    }));
+  });
+}
+function buildPrintSheet() {
+  const cell = c => c.k === "notice" ? `<div class="pnotice">${esc(c.text)}</div>`
+    : c.k === "shift" ? `<div class="pshift${c.small ? " small" : ""}">${esc(c.text)}</div>`
+    : c.k === "line" ? `<div class="pline${c.text ? "" : " open"}">${esc(c.text)}</div>`
+    : `<div class="pline filler"></div>`;
+  const rowsHtml = sheetModel().map((row, ri) => `<div class="prow${ri ? " second" : ""}">` +
+    row.map(d => `<div class="pday"><div class="pdate">${esc(d.date)}</div>${d.cells.map(cell).join("")}</div>`).join("") + `</div>`).join(`<div class="pgap"></div>`);
   $("#printSheet").innerHTML = `<h1>SOUTH PLAINS DUFFERS CORNDOG BOOTH SCHEDULE ${YEAR}</h1>
     ${rowsHtml}
     <div class="pfoot">PLEASE FILL IN ALL THE YELLOW SLOTS FIRST!!!!</div>
     <div class="purl">Sign up online: <b>${SITE_URL}</b></div>`;
+}
+/* Same sheet drawn on a canvas: landscape letter at 300 dpi. */
+function drawSheet() {
+  const W = 3300, H = 2550, M = 100, rows = sheetModel();
+  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+  const F = (px, bold, italic) => `${italic ? "italic " : ""}${bold ? "bold " : ""}${px}px Arial, Helvetica, sans-serif`;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
+  x.fillStyle = "#000"; x.font = F(58, true); x.textAlign = "center"; x.textBaseline = "middle";
+  x.fillText(`SOUTH PLAINS DUFFERS CORNDOG BOOTH SCHEDULE ${YEAR}`, W / 2, M + 30);
+  const gap = 30, footH = 70, urlH = 70, top = M + 90;
+  const totalLines = rows.reduce((a, r) => a + r[0].lines, 0);
+  const avail = H - top - M - gap - footH - urlH - 20;
+  const L = Math.min(52, Math.floor(avail / totalLines));
+  const colW = (W - 2 * M) / 5;
+  let y = top;
+  x.lineWidth = 3;
+  const fit = (text, maxW, px, bold, italic) => { let p = px; x.font = F(p, bold, italic); while (x.measureText(text).width > maxW && p > 18) { p -= 2; x.font = F(p, bold, italic); } };
+  rows.forEach((row, ri) => {
+    const rowTop = y;
+    row.forEach((d, ci) => {
+      const cx = M + ci * colW; let cy = rowTop;
+      const bar = (bg, text, px, bold, italic, color = "#000") => {
+        x.fillStyle = bg; x.fillRect(cx, cy, colW, L); x.strokeStyle = "#000"; x.strokeRect(cx, cy, colW, L);
+        if (text) { x.fillStyle = color; x.textAlign = "left"; fit(text, colW - 24, px, bold, italic); x.fillText(text, cx + 12, cy + L / 2 + 1); }
+        cy += L;
+      };
+      bar("#ff6600", d.date, Math.round(L * 0.62), true, true);
+      for (const cell of d.cells) {
+        if (cell.k === "notice") {
+          const h = L * cell.lines; x.fillStyle = "#fff45c"; x.fillRect(cx, cy, colW, h); x.strokeStyle = "#000"; x.strokeRect(cx, cy, colW, h);
+          x.fillStyle = "#000"; x.font = F(Math.round(L * 0.6), true); x.textAlign = "center";
+          cell.text.split("\n").forEach((t, i) => x.fillText(t, cx + colW / 2, cy + L * i + L / 2 + 1));
+          cy += h;
+        } else if (cell.k === "shift") bar("#bfbfbf", cell.text, Math.round(L * (cell.small ? 0.52 : 0.6)), true, false);
+        else if (cell.k === "line") {
+          x.fillStyle = "#fff45c"; x.fillRect(cx, cy, colW, L); x.strokeStyle = "#8c8c8c"; x.strokeRect(cx, cy, colW, L);
+          if (cell.text) { x.fillStyle = "#000"; x.textAlign = "left"; fit(cell.text, colW - 24, Math.round(L * 0.62), true, false); x.fillText(cell.text, cx + 12, cy + L / 2 + 1); }
+          cy += L;
+        } else { x.fillStyle = "#595959"; x.fillRect(cx, cy, colW, L); x.strokeStyle = "#3d3d3d"; x.strokeRect(cx, cy, colW, L); cy += L; }
+      }
+      x.strokeStyle = "#000"; x.lineWidth = 5; x.strokeRect(cx, rowTop, colW, cy - rowTop); x.lineWidth = 3;
+    });
+    y += row[0].lines * L;
+    if (ri === 0) { x.fillStyle = "#000"; x.fillRect(M, y, W - 2 * M, gap); y += gap; }
+  });
+  x.fillStyle = "#fff"; x.fillRect(M, y, W - 2 * M, footH); x.strokeStyle = "#000"; x.lineWidth = 5; x.strokeRect(M, y, W - 2 * M, footH);
+  x.fillStyle = "#e00"; x.font = F(44, true); x.textAlign = "center"; x.fillText("PLEASE FILL IN ALL THE YELLOW SLOTS FIRST!!!!", W / 2, y + footH / 2 + 1);
+  y += footH + 20;
+  x.fillStyle = "#000"; x.font = F(40, false); x.fillText("Sign up online: ", W / 2 - 200, y + urlH / 2); x.font = F(44, true); x.fillText(SITE_URL, W / 2 + 260, y + urlH / 2);
+  return new Promise(res => c.toBlob(res, "image/png"));
+}
+async function shareSheet() {
+  const btn = $("#btnPrint"), was = btn.textContent; btn.textContent = "Making the sheet…"; btn.disabled = true;
+  try {
+    const blob = await drawSheet();
+    const file = new File([blob], `duffers-corndog-schedule-${YEAR}.png`, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: `Duffers corndog booth schedule ${YEAR}` });
+    } else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); }
+  } catch (err) { if (err?.name !== "AbortError") showErr("Could not make the sheet: " + err.message); }
+  btn.textContent = was; btn.disabled = false;
 }
 /* ---- "My shifts" -> a calendar file with every shift this person is on. Opens straight into the
    phone's calendar (iPhone: Calendar; Android: Google Calendar; PC: Outlook). No account needed. ---- */
@@ -1301,27 +1371,10 @@ $("#calFile").onclick = () => {
   a.download = `duffers-shifts-${YEAR}.ics`; document.body.appendChild(a); a.click(); a.remove();
 };
 
-/* iPhone home-screen apps can't print (no print sheet in standalone mode) — hand off to Safari with ?print=1,
-   which prints as soon as the sign-ups have loaded. */
-const STANDALONE = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-$("#btnPrint").onclick = () => {
-  if (STANDALONE && /iPhone|iPad/i.test(navigator.userAgent)) {
-    const a = document.createElement("a"); a.href = location.origin + "/?print=1"; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    append_ok("Opening the sheet in Safari to print — the home-screen app can't print on iPhone.");
-    return;
-  }
-  buildPrintSheet(); window.print();   // synchronous: Safari only opens the print sheet inside a tap
-};
-let autoPrinted = false;
-function maybeAutoPrint() {
-  if (autoPrinted || !/[?&]print=1/.test(location.search) || !signups.length) return;
-  autoPrinted = true; history.replaceState(null, "", "/");
-  // Safari won't open the print sheet without a tap, so ask for one.
-  const e = $("#err"); e.innerHTML = `<b>Ready to print.</b> <button class="btn" id="printNow" style="margin-left:8px">🖨 Print the sheet</button>`;
-  e.hidden = false; e.style.background = "#e3f3e3"; e.style.borderColor = "#9bd09b";
-  $("#printNow").onclick = () => { buildPrintSheet(); window.print(); };
-  e.scrollIntoView({ block: "start" });
-}
+/* Phones and tablets: draw the sheet and open the share sheet (Print / AirDrop / Save to Files / send it).
+   That works from the home-screen app too, where the browser's own print is not available. */
+const MOBILE = /iPhone|iPad|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+$("#btnPrint").onclick = () => { if (MOBILE) shareSheet(); else { buildPrintSheet(); window.print(); } };
 window.addEventListener("beforeprint", buildPrintSheet);   // Ctrl+P / Share > Print also get a fresh sheet
 
 $("#btnExport").onclick = () => {

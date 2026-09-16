@@ -52,7 +52,10 @@
   .names li.blank.editable { cursor: text; }
   .names li.blank .hint { color: #b9a84f; font-weight: 400; font-size: 13px; font-style: italic; }
   .names li.blank input.inline { width: 100%; border: 0; background: transparent; font: inherit; font-weight: 700; padding: 4px 0; outline: none; }
-  .shift.full .names li.blank { display: none; }   /* your own name: bold like the rest, maroon so you can find it */
+  .shift.full .names li.blank { display: none; }
+  /* Admin-only: once a shift is full, one extra dashed line so a guest can still be written in. */
+  .shift.full .names li.blank.extra { display: block; background: #fff; border-bottom: 1.5px dashed #bbb; }
+  .names li.blank.extra .hint { color: #aaa; }   /* your own name: bold like the rest, maroon so you can find it */
   .names .x { background: none; border: 0; color: #a33; font-size: 18px; padding: 0 6px; cursor: pointer; line-height: 1; }
   .join { width: calc(100% - 24px); margin: 0 12px 10px; padding: 10px; border-radius: 8px; border: 1px dashed var(--maroon);
     background: #fff; color: var(--maroon); font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -464,7 +467,11 @@ function render() {
           /* Open slots stay on the page as blank lines, like the paper sheet: one per person still needed. */
           Array.from({ length: Math.max(0, need - n) }, () => isAdmin
             ? `<li class="blank editable" data-fill="${id}" title="Type a name into this slot">${meta.locked ? "" : "<span class='hint'>tap to write a name</span>"}</li>`
-            : `<li class="blank"></li>`).join("")}</ul>
+            : `<li class="blank"></li>`).join("")}${
+          /* Full shift: admin still gets one extra line to write in a guest (e.g. a visitor from Amarillo). */
+          isAdmin && n >= need && !s[2]?.free
+            ? `<li class="blank editable extra" data-fill="${id}" title="Add an extra person beyond the headcount"><span class='hint'>tap to add an extra person</span></li>`
+            : ""}</ul>
         ${s[2]?.free
           ? `<form class="free" data-slot="${id}" ${meta.locked && !isAdmin ? "hidden" : ""}><input placeholder="Volunteer's name" maxlength="40" autocomplete="off"><button type="submit">Add</button></form>`
           : `<button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>

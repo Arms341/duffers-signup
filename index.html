@@ -135,6 +135,15 @@
   .sig-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #888; margin: 2px 0 6px; }
   .sig-row button { background: none; border: 0; color: #a33; font-size: 13px; cursor: pointer; padding: 0; }
   #moneyDlg input[id^="ccName"] { margin: 6px 0 0; }
+  .cc-photo { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cc-photo img { max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #ccc; display: block; }
+  .cc-photo .btn { font-size: 14px; padding: 10px 12px; }
+  .cc-photo button.rm { background: none; border: 0; color: #a33; font-size: 13px; cursor: pointer; padding: 0; }
+  #photoDlg { width: min(96vw, 900px); padding: 10px; }
+  #photoDlg img { width: 100%; height: auto; max-height: 82vh; object-fit: contain; display: block; }
+  .totals-table td .by a { color: var(--maroon); font-weight: 600; text-decoration: none; }
+  #countPrint .cphoto { margin-top: 14px; page-break-inside: avoid; }
+  #countPrint .cphoto img { max-height: 3.2in; max-width: 100%; border: 1px solid #999; }
   /* Printed copy of one day's count sheet (portrait, goes in the bank bag) */
   #countPrint { display: none; }
   @media print {
@@ -306,11 +315,20 @@
   <input id="ccName2" placeholder="Printed name" maxlength="40" autocomplete="off" autocapitalize="words">
   <canvas class="sig" id="ccSig2"></canvas>
   <div class="sig-row"><span>Sign above with your finger</span><button type="button" data-clear="2">Clear</button></div>
-  <p class="cc-note" style="margin-top:4px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
+  <div class="cc-h">Square totals screen</div>
+  <div class="cc-photo">
+    <img id="ccPhotoImg" alt="Square totals" hidden>
+    <button class="btn" type="button" id="ccPhotoBtn">📷 Add photo of the Square screen</button>
+    <button class="rm" type="button" id="ccPhotoRm" hidden>Remove photo</button>
+    <input type="file" id="ccPhotoIn" accept="image/*" capture="environment" hidden>
+    <span class="cc-note" id="ccPhotoNote" style="margin:0">Instead of posting the screenshot in GroupMe — it stays with this night's count.</span>
+  </div>
+  <p class="cc-note" style="margin-top:8px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
   <div class="cc-err" id="ccErr" hidden></div>
   <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccPrint" style="background:#e8e6df" hidden>Print</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
 <div id="countPrint"></div>
+<dialog id="photoDlg"><img id="photoDlgImg" alt="Square totals"><div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="photoDlgClose">Close</button></div></dialog>
 
 <footer>
   <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
@@ -586,7 +604,7 @@ function renderTotals() {
     if (t != null) { ty += +t; anyTy = true; if (l != null) lySame += +l; }
     const p = pct(t, l);
     return `<tr><td>${fmtDay(day.date)}</td><td>${l == null ? "–" : money(l)}</td>
-      <td>${t == null ? "–" : money(t)}${countBy(meta.totals?.[di])}</td>
+      <td>${t == null ? "–" : money(t)}${countBy(meta.totals?.[di] && { ...meta.totals[di], _di: di })}</td>
       <td class="${p == null ? "" : p >= 0 ? "up" : "down"}">${p == null ? "–" : pctStr(p)}</td></tr>`;
   });
   const pAll = anyTy ? pct(ty, lySame) : null;
@@ -607,6 +625,7 @@ function countBy(e) {
   if (e.cash != null || e.card != null) bits.push(`cash ${money(e.cash || 0)} · card ${money(e.card || 0)}`);
   if (e.counters?.length) bits.push(`counted by ${e.counters.filter(Boolean).map(esc).join(" & ")}`);
   else if (e.by) bits.push(`by ${esc(e.by)}`);
+  if (e.photo) bits.push(`<a href="#" data-photo="${e._di}">📷 Square screen</a>`);
   return bits.length ? `<span class="by">${bits.join(" · ")}</span>` : "";
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -772,6 +791,54 @@ function syncTotal() { const t = ccTotal(); $("#ccTotal").textContent = t == nul
 billInputs().forEach(i => i.addEventListener("input", syncCash));
 ["#ccCash", "#ccCard", "#ccBank"].forEach(sel => $(sel).addEventListener("input", syncTotal));
 
+/* Photo of the Square totals screen. Shrunk in the browser to ~1000px JPEG (~100 KB) and kept in its own
+   doc, sheets/{year}/counts/{day}, so the year doc every phone listens to stays small. The year doc only
+   carries totals[day].photo = true; the picture is fetched when someone taps it. */
+let photoState = { data: null, changed: false };   // data: JPEG data URL or null
+function countsDoc(di) { return sheet().collection("counts").doc(String(di)); }
+function shrinkImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const max = 1000, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      let q = 0.8, out = c.toDataURL("image/jpeg", q);
+      while (out.length > 700000 && q > 0.3) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+      res(out);
+    };
+    img.onerror = () => rej(new Error("Could not read that image"));
+    img.src = url;
+  });
+}
+function showPhoto() {
+  const has = !!photoState.data;
+  $("#ccPhotoImg").hidden = !has; if (has) $("#ccPhotoImg").src = photoState.data;
+  $("#ccPhotoRm").hidden = !has;
+  $("#ccPhotoBtn").textContent = has ? "📷 Retake / replace photo" : "📷 Add photo of the Square screen";
+}
+$("#ccPhotoBtn").onclick = () => $("#ccPhotoIn").click();
+$("#ccPhotoIn").onchange = async () => {
+  const f = $("#ccPhotoIn").files[0]; $("#ccPhotoIn").value = ""; if (!f) return;
+  try { photoState = { data: await shrinkImage(f), changed: true }; showPhoto(); }
+  catch (e) { $("#ccErr").textContent = e.message; $("#ccErr").hidden = false; }
+};
+$("#ccPhotoRm").onclick = () => { photoState = { data: null, changed: true }; showPhoto(); };
+async function loadPhoto(di) {
+  const d = await countsDoc(di).get();
+  return d.exists ? (d.data().photo || null) : null;
+}
+$("#totalsTable").addEventListener("click", e => { const a = e.target.closest("[data-photo]"); if (a) { e.preventDefault(); viewPhoto(+a.dataset.photo); } });
+$("#photoDlgClose").onclick = () => $("#photoDlg").close();
+async function viewPhoto(di) {
+  try {
+    const p = await loadPhoto(di);
+    if (!p) { showErr("No photo saved for that night."); return; }
+    $("#photoDlgImg").src = p; $("#photoDlg").showModal();
+  } catch (e) { showErr("Could not load the photo: " + e.message); }
+}
+
 function openMoney(di) {
   if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
   moneyDay = di;
@@ -788,6 +855,9 @@ function openMoney(di) {
   $("#lyIn").value = carried ?? e.lastYear ?? "";
   $("#ccErr").hidden = true;
   $("#ccPrint").hidden = e.amount == null;
+  photoState = { data: null, changed: false }; showPhoto();
+  if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; loadPhoto(di).then(p => { if (moneyDay === di && !photoState.changed) { photoState.data = p; showPhoto(); } })
+    .catch(() => {}).finally(() => { $("#ccPhotoNote").textContent = "Instead of posting the screenshot in GroupMe — it stays with this night's count."; }); }
   $("#moneyDlg").showModal();
   syncCash();
   // canvases have a size only once the dialog is showing
@@ -814,10 +884,14 @@ $("#moneyOk").onclick = async () => {
   } else {
     // everything blank = clear the day
     var FV = firebase.firestore.FieldValue;
-    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts"]) entry[k] = FV.delete();
+    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
   }
   if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
   try {
+    if (photoState.changed) {
+      if (photoState.data) { await countsDoc(moneyDay).set({ photo: photoState.data, by: myName, uid, ts: firebase.firestore.FieldValue.serverTimestamp() }); entry.photo = true; }
+      else { await countsDoc(moneyDay).delete().catch(() => {}); entry.photo = firebase.firestore.FieldValue.delete(); }
+    } else if (total == null) { await countsDoc(moneyDay).delete().catch(() => {}); }
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
     $("#moneyDlg").close();
   } catch (err2) { showErr("Could not save the count: " + err2.message); }
@@ -841,6 +915,7 @@ function buildCountPrint(di) {
     <div>Worksheet Area</div>
     <div class="ws">${BILLS.map(b => `<span>${b}'s</span><span class="v">${e.counts?.[b] != null ? `${e.counts[b]} × $${b} = ` : ""}${m(e.bills?.[b])}</span>`).join("")}
       <span class="t">Total</span><span class="v t">${m(e.cash ?? e.amount)}</span></div>
+    ${photoState.data ? `<div class="cphoto"><div style="font-size:9pt;color:#555;margin-bottom:4px">Square totals screen</div><img src="${photoState.data}" alt=""></div>` : ""}
     <div style="margin-top:18px;font-size:9pt;color:#555">Entered in the Duffers sign-up app by ${esc(e.by || "")} · duffers-signup-app.vercel.app</div>`;
 }
 $("#ccPrint").onclick = () => {

@@ -101,6 +101,7 @@
   .totals-table tr.sum td { font-weight: 700; background: var(--gold); border-top: 2px solid var(--gold-deep); }
   .totals-table td.up { color: var(--ok); } .totals-table td.down { color: #a33; }
   .totals-table td .by { display: block; font-size: 11px; color: #999; font-weight: 400; }
+  .disclaimer { font-size: 12px; color: #777; font-style: italic; padding: 8px 12px 10px; border-top: 1px solid #eee; }
   .admin-tools { display: none; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
   body.admin .admin-tools { display: flex; }
   .admin-tools .btn { background: var(--maroon); color: #fff; font-size: 13px; padding: 8px 12px; }
@@ -154,7 +155,7 @@
     .day h2 { flex-wrap: wrap; }
     .shift-head { font-size: 18px; padding: 12px 12px; } .shift-head .count { font-size: 17px; }
     .tile .val { font-size: 26px; }
-    .totals-table table { font-size: 17px; } .totals-table td .by { font-size: 13px; }
+    .totals-table table { font-size: 17px; } .disclaimer { font-size: 14px; } .totals-table td .by { font-size: 13px; }
     .names li { font-size: 18px; padding: 8px 0; } .names .x { font-size: 24px; }
     .join { font-size: 18px; padding: 14px; }
     .notes .n { font-size: 15px; } .notes .n .when { font-size: 12px; }
@@ -208,6 +209,7 @@
   <section class="totals-table">
     <h2>Daily deposits</h2>
     <div style="overflow-x:auto"><table id="totalsTable"></table></div>
+    <div class="disclaimer">Last year's (2025) numbers were read off photos of the nightly shift count sheets, not official bank deposit records. They have not been verified.</div>
   </section>
 </main>
 

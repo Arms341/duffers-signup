@@ -45,13 +45,15 @@
   .names li:last-child { border-bottom: 0; }
   .names li.me { color: var(--maroon); }
   .names li.blank { min-height: 34px; border-bottom: 1.5px solid #9a9a9a; background: #fbf4c8; margin-top: 4px; }
+  .names li.blank.editable { cursor: text; }
+  .names li.blank .hint { color: #b9a84f; font-weight: 400; font-size: 13px; font-style: italic; }
+  .names li.blank input.inline { width: 100%; border: 0; background: transparent; font: inherit; font-weight: 700; padding: 4px 0; outline: none; }
   .shift.full .names li.blank { display: none; }   /* your own name: bold like the rest, maroon so you can find it */
   .names .x { background: none; border: 0; color: #a33; font-size: 18px; padding: 0 6px; cursor: pointer; line-height: 1; }
   .join { width: calc(100% - 24px); margin: 0 12px 10px; padding: 10px; border-radius: 8px; border: 1px dashed var(--maroon);
     background: #fff; color: var(--maroon); font-weight: 600; font-size: 15px; cursor: pointer; }
   .join:disabled { opacity: .45; cursor: default; }
   .join.in { border-style: solid; background: #f4eaea; }
-  .join.other { border-color: #888; color: #444; font-weight: 500; margin-top: -4px; }
   form.free { display: flex; gap: 6px; margin: 0 12px 10px; }
   form.free input { flex: 1; min-width: 0; padding: 10px 12px; border: 1.5px dashed var(--maroon); border-radius: 8px; font-size: 16px; }
   form.free button { padding: 10px 16px; border: 0; border-radius: 8px; background: var(--maroon); color: #fff; font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -413,11 +415,13 @@ function render() {
         <div class="shift-head"><span>${shiftTitle(s)}</span><span class="count" ${isAdmin ? `data-needslot="${di}|${shiftLabel(s)}" title="Tap to change how many this one shift needs" style="cursor:pointer;text-decoration:underline dotted"` : ""}>${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
         <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("")}${
           /* Open slots stay on the page as blank lines, like the paper sheet: one per person still needed. */
-          Array.from({ length: Math.max(0, need - n) }, () => `<li class="blank"></li>`).join("")}</ul>
+          Array.from({ length: Math.max(0, need - n) }, () => isAdmin
+            ? `<li class="blank editable" data-fill="${id}" title="Type a name into this slot">${meta.locked ? "" : "<span class='hint'>tap to write a name</span>"}</li>`
+            : `<li class="blank"></li>`).join("")}</ul>
         ${s[2]?.free
           ? `<form class="free" data-slot="${id}" ${meta.locked && !isAdmin ? "hidden" : ""}><input placeholder="Volunteer's name" maxlength="40" autocomplete="off"><button type="submit">Add</button></form>`
           : `<button class="join ${meIn ? "in" : ""}" data-slot="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}" ${meta.locked && !isAdmin ? "disabled" : ""}>${meIn ? "✓ You're on this shift" : "+ Sign me up"}</button>
-        ${isAdmin ? `<button class="join other" data-other="${id}" data-label="${fmtDay(day.date)} ${s[0]}–${s[1]}">+ Add someone else (admin)</button>` : ""}`}
+`}
         <div class="notes">
           ${notes.filter(n => n.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0))
             .map(n => `<div class="n"><b>${esc(n.name)}:</b> ${esc(n.text)}<span class="when">${when(n.ts)}</span>${(n.device === deviceId || isAdmin) ? ` <button class="x" data-note="${n.id}" title="Remove note">×</button>` : ""}</div>`).join("")}
@@ -494,11 +498,21 @@ document.addEventListener("click", async e => {
     try { await addSignup(slot, myName); }
     catch (err) { showErr("Sign-up failed: " + err.message); join.disabled = false; }
   }
-  const other = e.target.closest(".join.other");
-  if (other) {
-    const name = (prompt(`Name to add to ${other.dataset.label}:`) || "").trim().slice(0, 40);
-    if (!name) return;
-    try { await addSignup(other.dataset.other, name); } catch (err) { showErr("Add failed: " + err.message); }
+  // Admin: tap a yellow blank line and write straight onto it, like a pen on the paper.
+  const blank = e.target.closest("li.blank.editable");
+  if (blank && !blank.querySelector("input")) {
+    blank.innerHTML = `<input class="inline" placeholder="Name" maxlength="40" autocomplete="off">`;
+    const inp = blank.querySelector("input"); inp.focus();
+    let done = false;
+    const finish = async (save) => {
+      if (done) return; done = true;
+      const name = inp.value.trim().slice(0, 40);
+      if (!save || !name) { render(); return; }
+      try { await addSignup(blank.dataset.fill, name, "admin"); }
+      catch (err) { showErr("Could not add: " + err.message); render(); }
+    };
+    inp.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); finish(true); } if (ev.key === "Escape") finish(false); });
+    inp.addEventListener("blur", () => finish(true));
     return;
   }
   const x = e.target.closest(".x");

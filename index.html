@@ -354,7 +354,7 @@
   <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn ghost" style="color:#a33;border-color:#a33" id="ccClear" hidden>Clear day</button><button class="btn" id="ccShare" style="background:#e8e6df" hidden>Share</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
 <dialog id="guideDlg">
-  <h3 style="margin-bottom:4px">Put Duffers on your home screen</h3>
+  <h3 style="margin-bottom:4px">Add Duffers Fair App to homescreen</h3>
   <p style="margin:0 0 10px;font-size:14px;color:#555">Then it opens like an app — no typing the address or the code again.</p>
   <div class="gtabs"><button id="gIos" class="on">iPhone / iPad</button><button id="gAnd">Android</button></div>
   <div class="gpane" id="gPaneIos">
@@ -379,7 +379,7 @@
 
 <footer>
   <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
-  <span><button class="glink" id="btnGuide">📲 Add to home screen</button><button id="btnAdmin">Admin</button></span>
+  <span><button class="glink" id="btnGuide">📲 Add Duffers Fair App to homescreen</button><button id="btnAdmin">Admin</button></span>
 </footer>
 
 <div id="printSheet"></div>
@@ -708,13 +708,13 @@ $("#openCopy").onclick = async () => {
 
 /* Add-to-home-screen nudge. Phones only; hidden once installed (standalone) or dismissed. */
 let installEvt = null;
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("#a2hsBtn").hidden = false; $("#a2hsText").textContent = "Put this on your home screen so it opens like an app."; });
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("#a2hsBtn").hidden = false; $("#a2hsText").textContent = "Add Duffers Fair App to homescreen — then it opens like an app."; });
 function showA2hs() {
   const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const phone = /iPhone|iPad|Android/i.test(navigator.userAgent);
   let dismissed = false; try { dismissed = localStorage.getItem("duffers.a2hs") === "no"; } catch (e) {}
   if (standalone || !phone || dismissed) return;
-  $("#a2hsText").innerHTML = "<b>Put this on your home screen</b> so it opens like an app.";
+  $("#a2hsText").innerHTML = "<b>Add Duffers Fair App to homescreen</b> — then it opens like an app.";
   $("#a2hs").classList.add("show");
 }
 $("#a2hsBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice; if (r.outcome === "accepted") $("#a2hs").classList.remove("show"); };

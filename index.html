@@ -209,6 +209,15 @@
   </section>
 </main>
 
+<dialog id="calDlg">
+  <h3>Save my shifts to my calendar</h3>
+  <p style="margin:0 0 10px;font-size:14px;color:#555">Pick your phone. <b>Subscribe</b> means your calendar stays in step with the sheet on its own — add or drop a shift here and your calendar follows, with no doubles. You only do this once.</p>
+  <button class="btn" id="calApple" style="width:100%;margin-bottom:8px">📱 iPhone / iPad / Outlook — Subscribe</button>
+  <button class="btn" id="calGoogle" style="width:100%;margin-bottom:8px">🤖 Android / Google Calendar — Subscribe</button>
+  <button class="btn" id="calFile" style="width:100%;background:#eee;font-weight:500">Just give me a one-time file instead</button>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="calCancel">Cancel</button></div>
+</dialog>
+
 <dialog id="moneyDlg">
   <h3 id="moneyTitle">Deposit</h3>
   <p style="margin:0 0 4px;font-size:13px;color:#555">Enter after the bank deposit. Whole dollars are fine.</p>
@@ -754,10 +763,20 @@ function buildIcs(name) {
     "BEGIN:DAYLIGHT", "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "TZOFFSETFROM:-0600", "TZOFFSETTO:-0500", "END:DAYLIGHT",
     "END:VTIMEZONE", ...mine, "END:VCALENDAR"].join("\r\n") + "\r\n";
 }
+/* The live feed lives at /api/cal?name=... (a Vercel function reading the same Firestore).
+   Subscribing to it is the no-duplicates, self-updating path; the one-time file is the fallback. */
+const feedUrl = () => `${SITE_URL}/api/cal?name=${encodeURIComponent(myName)}&year=${YEAR}`;
 $("#btnCal").onclick = () => {
   if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
-  const ics = buildIcs(myName);
-  if (!ics) { alert("You're not on any shifts yet — tap + Sign me up first."); return; }
+  if (!signups.some(x => x.name.toLowerCase() === myName.toLowerCase())) { alert("You're not on any shifts yet — tap + Sign me up first."); return; }
+  $("#calDlg").showModal();
+};
+$("#calCancel").onclick = () => $("#calDlg").close();
+$("#calApple").onclick = () => { $("#calDlg").close(); location.href = "webcal://" + feedUrl(); };
+$("#calGoogle").onclick = () => { $("#calDlg").close(); window.open("https://calendar.google.com/calendar/u/0/r?cid=" + encodeURIComponent("https://" + feedUrl()), "_blank"); };
+$("#calFile").onclick = () => {
+  $("#calDlg").close();
+  const ics = buildIcs(myName); if (!ics) return;
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
   a.download = `duffers-shifts-${YEAR}.ics`; document.body.appendChild(a); a.click(); a.remove();

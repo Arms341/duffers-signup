@@ -137,6 +137,7 @@
   #moneyDlg input[id^="ccName"] { margin: 6px 0 0; }
   .cc-photo { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .cc-photo img { max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #ccc; display: block; }
+  .cc-photo img[hidden], .cc-photo button[hidden] { display: none; }
   .cc-photo .btn { font-size: 14px; padding: 10px 12px; }
   .cc-photo button.rm { background: none; border: 0; color: #a33; font-size: 13px; cursor: pointer; padding: 0; }
   #photoDlg { width: min(96vw, 900px); padding: 10px; }
@@ -321,7 +322,7 @@
     <button class="btn" type="button" id="ccPhotoBtn">📷 Add photo of the Square screen</button>
     <button class="rm" type="button" id="ccPhotoRm" hidden>Remove photo</button>
     <input type="file" id="ccPhotoIn" accept="image/*" capture="environment" hidden>
-    <span class="cc-note" id="ccPhotoNote" style="margin:0">Instead of posting the screenshot in GroupMe — it stays with this night's count.</span>
+    <span class="cc-note" id="ccPhotoNote" style="margin:0" hidden></span>
   </div>
   <p class="cc-note" style="margin-top:8px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
   <div class="cc-err" id="ccErr" hidden></div>
@@ -856,8 +857,10 @@ function openMoney(di) {
   $("#ccErr").hidden = true;
   $("#ccPrint").hidden = e.amount == null;
   photoState = { data: null, changed: false }; showPhoto();
-  if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; loadPhoto(di).then(p => { if (moneyDay === di && !photoState.changed) { photoState.data = p; showPhoto(); } })
-    .catch(() => {}).finally(() => { $("#ccPhotoNote").textContent = "Instead of posting the screenshot in GroupMe — it stays with this night's count."; }); }
+  $("#ccPhotoNote").hidden = true;
+  if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; $("#ccPhotoNote").hidden = false;
+    loadPhoto(di).then(p => { if (moneyDay === di && !photoState.changed) { photoState.data = p; showPhoto(); } })
+    .catch(() => {}).finally(() => { $("#ccPhotoNote").hidden = true; }); }
   $("#moneyDlg").showModal();
   syncCash();
   // canvases have a size only once the dialog is showing

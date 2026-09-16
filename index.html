@@ -327,7 +327,7 @@
   </div>
   <p class="cc-note" style="margin-top:8px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
   <div class="cc-err" id="ccErr" hidden></div>
-  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="moneyOk">Save</button></div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccShare" style="background:#e8e6df" hidden>Share</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
 <dialog id="openDlg">
   <h3>Open shifts</h3>
@@ -918,6 +918,7 @@ function openMoney(di) {
   $("#lyWrap").hidden = carried != null;                 // already known from last year's sheet
   $("#lyIn").value = carried ?? e.lastYear ?? "";
   $("#ccErr").hidden = true;
+  $("#ccShare").hidden = e.amount == null;
   photoState = { data: null, changed: false }; showPhoto();
   $("#ccPhotoNote").hidden = true;
   if (e.photo) { $("#ccPhotoNote").textContent = "Loading photo…"; $("#ccPhotoNote").hidden = false;
@@ -960,6 +961,75 @@ $("#moneyOk").onclick = async () => {
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
     $("#moneyDlg").close();
   } catch (err2) { showErr("Could not save the count: " + err2.message); }
+};
+
+/* Share one night's count as a single picture (numbers, who counted, signatures, Square screen) through the
+   phone's share sheet -> GroupMe. On a computer, or a browser that can't share files, it downloads instead. */
+const loadImg = src => new Promise(res => { if (!src) return res(null); const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+async function countCard(di) {
+  const e = meta.totals?.[di] || {}, d = DAYS[di].date;
+  const [s1, s2, ph] = await Promise.all([loadImg(e.sigs?.[0]), loadImg(e.sigs?.[1]), loadImg(photoState.data)]);
+  const W = 1080, P = 48, rowH = 74;
+  const rows = [["1  Total Cash Count", e.cash ?? e.amount], ["2  Credit Card Sales", e.card], ["3  Starting Bank", e.bank]];
+  const bills = BILLS.filter(b => e.counts?.[b] != null);
+  const billsLine = bills.length ? bills.map(b => `${e.counts[b]}×$${b}`).join("   ") : "";
+  const phH = ph ? Math.min(1500, Math.round((W - 2 * P) * ph.height / ph.width)) : 0;
+  const H = 170 + rows.length * rowH + 110 + (billsLine ? 50 : 0) + 210 + (ph ? phH + 70 : 0) + 60;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
+  x.fillStyle = "#7a1f1f"; x.fillRect(0, 0, W, 130);
+  x.fillStyle = "#fff"; x.font = "bold 46px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textBaseline = "middle";
+  x.fillText("Daily Cash Count", P, 50);
+  x.font = "30px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.fillStyle = "#f3e39a";
+  x.fillText(`${fmtDay(d)}, ${d.getFullYear()} · Duffers corndog booth`, P, 96);
+  let y = 170;
+  x.textBaseline = "middle";
+  for (const [label, v] of rows) {
+    x.fillStyle = "#1c1c1c"; x.font = "34px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "left"; x.fillText(label, P, y + rowH / 2);
+    x.font = "bold 36px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "right"; x.fillText(v == null ? "–" : money(v), W - P, y + rowH / 2);
+    x.strokeStyle = "#e5e5e5"; x.beginPath(); x.moveTo(P, y + rowH); x.lineTo(W - P, y + rowH); x.stroke();
+    y += rowH;
+  }
+  x.fillStyle = "#f3e39a"; x.fillRect(P, y + 12, W - 2 * P, 90);
+  x.fillStyle = "#1c1c1c"; x.font = "bold 36px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "left"; x.fillText("4  Total Sales", P + 20, y + 57);
+  x.font = "bold 52px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "right"; x.fillText(money(e.amount), W - P - 20, y + 57);
+  y += 110;
+  if (billsLine) { x.fillStyle = "#777"; x.font = "26px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "left"; x.fillText("Bills: " + billsLine, P, y + 20); y += 50; }
+  x.fillStyle = "#7a1f1f"; x.font = "bold 26px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "left";
+  x.fillText("COUNTED & VERIFIED BY", P, y + 24);
+  const half = (W - 2 * P - 30) / 2;
+  [[e.counters?.[0], s1], [e.counters?.[1], s2]].forEach(([n, img], i) => {
+    const bx = P + i * (half + 30);
+    if (img) x.drawImage(img, bx, y + 48, half, half * img.height / img.width);
+    x.strokeStyle = "#999"; x.beginPath(); x.moveTo(bx, y + 140); x.lineTo(bx + half, y + 140); x.stroke();
+    x.fillStyle = "#1c1c1c"; x.font = "32px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.fillText(n || "", bx, y + 172);
+  });
+  y += 210;
+  if (ph) {
+    x.fillStyle = "#777"; x.font = "26px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.fillText("Square totals screen", P, y + 20); y += 46;
+    x.drawImage(ph, P, y, W - 2 * P, phH); x.strokeStyle = "#ccc"; x.strokeRect(P, y, W - 2 * P, phH); y += phH + 24;
+  }
+  x.fillStyle = "#999"; x.font = "24px -apple-system, Segoe UI, Roboto, Arial, sans-serif"; x.textAlign = "left";
+  x.fillText(`Entered by ${e.by || ""} · duffers-signup-app.vercel.app`, P, H - 30);
+  return new Promise(res => c.toBlob(res, "image/png"));
+}
+$("#ccShare").onclick = async () => {
+  const e = meta.totals?.[moneyDay] || {}, d = DAYS[moneyDay].date, btn = $("#ccShare");
+  btn.textContent = "Making picture…"; btn.disabled = true;
+  try {
+    const blob = await countCard(moneyDay);
+    const file = new File([blob], `cash-count-${DAYS[moneyDay].key}.png`, { type: "image/png" });
+    const text = `Daily Cash Count — ${shortDay(d)}: total sales ${money(e.amount)} (cash ${money(e.cash || 0)}, card ${money(e.card || 0)}, bank ${money(e.bank || 0)}). Counted by ${(e.counters || []).filter(Boolean).join(" & ")}.`;
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Daily Cash Count", text });
+    } else {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+      try { await navigator.clipboard.writeText(text); } catch (x) {}
+      append_ok("Picture downloaded (this browser can't share straight to GroupMe). Attach it in GroupMe; the summary text is on your clipboard.");
+    }
+  } catch (err) { if (err?.name !== "AbortError") showErr("Could not share: " + err.message); }
+  btn.textContent = "Share"; btn.disabled = false;
 };
 
 /* [device] is who can take the name off again from a phone: "admin" rows only the admin can remove. */

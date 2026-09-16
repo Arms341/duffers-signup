@@ -82,6 +82,12 @@ Volunteers - If Needed block on opening Thursday · hardened lodge gate (whole p
 in-app browsers can't skip it) · header scrolls away on phones · **Save My Shifts To My Calendar** · reworded
 name instructions · totals disclaimer · "Running late? Add a note" tip · **Daily Cash Count** dialog with signatures + print.
 
+- **09-16 crew-facing adds:** real `manifest.webmanifest` + `icon-192/512.png` + `apple-touch-icon.png` (corndog on
+  maroon) and an "Add to home screen" nudge (phones only, hides when installed or after "Not now" →
+  `localStorage duffers.a2hs`); **"Your shifts" strip** under the name (chips, tap scrolls to the shift;
+  shift divs have `id="slot-<slotId>"`); admin **"Copy open shifts for GroupMe"** → editable text of every
+  under-headcount shift + link + lodge code, Copy button.
+
 ## 6. Calendar
 - Button opens a dialog: iPhone → `webcal://` subscribe to `api/cal?name=...` (live, updates hourly);
   Android → downloads an `.ics`; Google Calendar on a computer → copies the feed link with

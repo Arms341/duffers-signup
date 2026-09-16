@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#7a1f1f">
 <title>Duffers Corndog Booth Sign-Up</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRHVmZmVycyBTaWduLVVwIiwic2hvcnRfbmFtZSI6IkR1ZmZlcnMiLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZmZmZmZiIsInRoZW1lX2NvbG9yIjoiIzdhMWYxZiJ9">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Duffers">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
   :root {
     --maroon: #7a1f1f; --maroon-dark: #5c1616; --gold: #f3e39a; --gold-deep: #e6cf5c;
@@ -31,6 +36,19 @@
   main { padding: 12px 12px 80px; max-width: 1100px; margin: 0 auto; }
   .notice { background: var(--gold); border: 1px solid var(--gold-deep); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
   .notice.err { background: #fde2e2; border-color: #e5a0a0; }
+  /* "Add to home screen" nudge — phones only, dismissable, gone once installed */
+  .a2hs { display: none; background: var(--gold); border: 1px solid var(--gold-deep); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
+  .a2hs.show { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .a2hs .txt { flex: 1; min-width: 200px; }
+  .a2hs .btn { font-size: 13px; padding: 8px 12px; }
+  .a2hs .no { background: none; border: 0; color: #7a6a20; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+  /* "My shifts" strip under the name */
+  .mine-strip { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--maroon); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
+  .mine-strip b { color: var(--maroon); }
+  .mine-strip .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .mine-strip .chip { background: var(--gold); border: 1px solid var(--gold-deep); border-radius: 999px; padding: 5px 11px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .mine-strip .none { color: var(--muted); }
+  #openDlg textarea { width: 100%; min-height: 200px; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; border: 1px solid #ccc; border-radius: 8px; padding: 10px; }
   .stats { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 0 0 12px; }
   .stats b { color: var(--ink); }
   .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
@@ -204,6 +222,8 @@
     .notice { font-size: 16px; }
     .howto { font-size: 15px; }
     .stats { font-size: 15px; }
+    .mine-strip { font-size: 16px; } .mine-strip .chip { font-size: 16px; padding: 8px 14px; }
+    .a2hs { font-size: 15px; }
     .tile .lbl { font-size: 12px; } .tile .val { font-size: 22px; }
     .day h2 { font-size: 18px; padding: 10px 12px; }
     .money { font-size: 17px; gap: 10px; } .money .ty { font-size: 19px; }
@@ -240,6 +260,8 @@
 <div id="lockedBanner" class="locked-banner" hidden>Sign-ups are locked. Contact Branden for changes.</div>
 
 <main>
+  <div id="a2hs" class="a2hs"><span class="txt" id="a2hsText"></span><button class="btn" id="a2hsBtn" hidden>Install</button><button class="no" id="a2hsNo">Not now</button></div>
+  <div id="mineStrip" class="mine-strip" hidden></div>
   <div id="notice" class="notice">If you cannot work your scheduled shift, <b>it is your responsibility</b> to find coverage. Please fill in the <b>yellow</b> slots first.</div>
   <div id="err" class="notice err" hidden></div>
   <div class="totals-top">
@@ -254,6 +276,7 @@
   </div>
   <div class="admin-tools">
     <button class="btn" id="btnLock">Lock / unlock sign-ups</button>
+    <button class="btn" id="btnOpen">Copy open shifts for GroupMe</button>
     <button class="btn" id="btnExport">Export roster (CSV)</button>
     <button class="btn" id="btnNeeds">Set people needed per shift</button>
     <button class="btn" id="btnPaper" hidden>Load the 2026 paper sheet</button>
@@ -329,6 +352,12 @@
   <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccPrint" style="background:#e8e6df" hidden>Print</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
 <div id="countPrint"></div>
+<dialog id="openDlg">
+  <h3>Open shifts</h3>
+  <p style="margin:0 0 8px;font-size:13px;color:#555">Edit if you like, then Copy and paste it into the GroupMe.</p>
+  <textarea id="openText"></textarea>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="openClose">Close</button><button class="btn" id="openCopy">Copy</button></div>
+</dialog>
 <dialog id="photoDlg"><img id="photoDlgImg" alt="Square totals"><div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="photoDlgClose">Close</button></div></dialog>
 
 <footer>
@@ -484,6 +513,7 @@ function gate() {
 
 /* ---- Firebase ---- */
 async function start() {
+  showA2hs();
   if (firebaseConfig.apiKey === "PASTE_ME") { showErr("Firebase config has not been pasted into index.html yet."); render(); return; }
   try {
     firebase.initializeApp(firebaseConfig);
@@ -531,7 +561,7 @@ function needsFor(shift, di) {
 function render() {
   const today = new Date().toISOString().slice(0, 10);
   const wrap = $("#days"); wrap.innerHTML = "";
-  let short = 0, mine = 0;
+  let short = 0, mine = 0; const myShifts = [];
   $("#lockedBanner").hidden = !meta.locked;
   DAYS.forEach((day, di) => {
     const el = document.createElement("section");
@@ -545,10 +575,11 @@ function render() {
       const rows = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0));
       const need = needsFor(s, di), n = rows.length;
       const meIn = rows.find(r => r.device === deviceId || (myName && r.name.toLowerCase() === myName.toLowerCase()));
-      if (meIn) mine++;
+      if (meIn) { mine++; myShifts.push({ day, s, id }); }
       if (n < need) short++;
       const sh = document.createElement("div");
       sh.className = "shift " + (n < need ? "needs" : "full");
+      sh.id = "slot-" + id;
       sh.innerHTML = `
         <div class="shift-head"><span>${shiftTitle(s)}</span><span class="count" ${isAdmin ? `data-needslot="${di}|${shiftLabel(s)}" title="Tap to change how many this one shift needs" style="cursor:pointer;text-decoration:underline dotted"` : ""}>${n} / ${need}${n < need ? " · needs " + (need - n) : " · covered"}</span></div>
         <ul class="names">${rows.map(r => `<li class="${r.device === deviceId ? "me" : ""}"><span>${esc(r.name)}</span>${(r.device === deviceId || isAdmin) && !meta.locked || isAdmin ? `<button class="x" data-id="${r.id}" title="Remove">×</button>` : ""}</li>`).join("")}${
@@ -583,8 +614,63 @@ function render() {
   $("#shortCount").textContent = short;
   $("#totalCount").textContent = signups.length;
   $("#mineCount").textContent = mine + " shift" + (mine === 1 ? "" : "s");
+  renderMine(myShifts);
   renderTotals();
 }
+/* "Your shifts" strip: answers "when do I work?" without scrolling ten days. Tap a chip to jump to it. */
+function shortDay(d) { return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); }
+function shortTime(t) { return t.replace(":00", "").replace(" PM", " PM").replace(" AM", " AM"); }
+function renderMine(list) {
+  const el = $("#mineStrip");
+  if (!myName) { el.hidden = true; return; }
+  el.hidden = false;
+  if (!list.length) { el.innerHTML = `<b>${esc(myName)}</b> — <span class="none">you're not on any shift yet. Tap <b>+ Sign me up</b> on the ones you want.</span>`; return; }
+  el.innerHTML = `<b>${esc(myName)}</b> — your ${list.length} shift${list.length === 1 ? "" : "s"}:
+    <div class="chips">${list.map(m => `<span class="chip" data-jump="slot-${m.id}">${shortDay(m.day.date)} · ${shortTime(m.s[0])}–${shortTime(m.s[1])}</span>`).join("")}</div>`;
+}
+$("#mineStrip").addEventListener("click", e => {
+  const c = e.target.closest("[data-jump]"); if (!c) return;
+  const t = document.getElementById(c.dataset.jump); if (t) { t.scrollIntoView({ behavior: "smooth", block: "center" }); t.style.outline = "3px solid var(--gold-deep)"; setTimeout(() => t.style.outline = "", 1600); }
+});
+
+/* Open shifts as a message for the GroupMe. */
+function openShiftsText() {
+  const lines = [];
+  DAYS.forEach((day, di) => {
+    for (const s of day.shifts) {
+      if (s[2]?.free) continue;
+      const id = slotId(day.key, s), n = signups.filter(x => x.slot === id).length, need = needsFor(s, di);
+      if (n < need) lines.push(`• ${shortDay(day.date)}, ${shortTime(s[0])}–${shortTime(s[1])}: need ${need - n} more`);
+    }
+  });
+  if (!lines.length) return "Corndog booth: every shift is covered. Thank you!";
+  return `Corndog booth — still need help on these shifts:\n${lines.join("\n")}\n\nSign up: duffers-signup-app.vercel.app (lodge code ${LODGE_CODE})`;
+}
+$("#btnOpen").onclick = () => { $("#openText").value = openShiftsText(); $("#openDlg").showModal(); };
+$("#openClose").onclick = () => $("#openDlg").close();
+$("#openCopy").onclick = async () => {
+  const t = $("#openText");
+  try { await navigator.clipboard.writeText(t.value); $("#openCopy").textContent = "Copied ✓"; }
+  catch (e) { t.select(); document.execCommand("copy"); $("#openCopy").textContent = "Copied ✓"; }
+  setTimeout(() => { $("#openCopy").textContent = "Copy"; $("#openDlg").close(); }, 900);
+};
+
+/* Add-to-home-screen nudge. Phones only; hidden once installed (standalone) or dismissed. */
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("#a2hsBtn").hidden = false; $("#a2hsText").textContent = "Put this on your home screen so it opens like an app."; });
+function showA2hs() {
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const phone = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  let dismissed = false; try { dismissed = localStorage.getItem("duffers.a2hs") === "no"; } catch (e) {}
+  if (standalone || !phone || dismissed) return;
+  const ios = /iPhone|iPad/i.test(navigator.userAgent);
+  $("#a2hsText").innerHTML = ios
+    ? "Put this on your home screen: tap <b>Share</b> (the box with the arrow) → <b>Add to Home Screen</b>. Then it opens like an app."
+    : "Put this on your home screen: tap <b>⋮</b> → <b>Add to Home screen</b>. Then it opens like an app.";
+  $("#a2hs").classList.add("show");
+}
+$("#a2hsBtn").onclick = async () => { if (!installEvt) return; installEvt.prompt(); const r = await installEvt.userChoice; if (r.outcome === "accepted") $("#a2hs").classList.remove("show"); };
+$("#a2hsNo").onclick = () => { try { localStorage.setItem("duffers.a2hs", "no"); } catch (e) {} $("#a2hs").classList.remove("show"); };
 
 /* ---- Money ---- */
 function pct(t, l) { if (l == null || t == null || +l === 0) return null; return (+t - +l) / +l * 100; }

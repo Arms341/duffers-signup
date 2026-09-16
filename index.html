@@ -211,6 +211,12 @@
     <div style="overflow-x:auto"><table id="totalsTable"></table></div>
     <div class="disclaimer">Last year's (2025) numbers were read off photos of the nightly shift count sheets, not official bank deposit records. They have not been verified.</div>
   </section>
+
+  <section class="totals-table fair-notes">
+    <h2>Fair notes</h2>
+    <div class="disclaimer" style="border-top:0;padding-bottom:0;font-style:normal">Anything the whole crew should know — supply runs, what's low, who has the keys, lessons for next year. Anyone can add one.</div>
+    <div class="notes" id="fairNotes" style="border-top:0"></div>
+  </section>
 </main>
 
 <dialog id="calDlg">
@@ -472,6 +478,11 @@ function render() {
     }
     wrap.appendChild(el);
   });
+  // Fair-wide notes: same collection, slot "fair", newest at the bottom.
+  $("#fairNotes").innerHTML = `${notes.filter(n => n.slot === "fair").sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0))
+      .map(n => `<div class="n"><b>${esc(n.name)}:</b> ${esc(n.text)}<span class="when">${when(n.ts)}</span>${(n.device === deviceId || isAdmin) ? ` <button class="x" data-note="${n.id}" title="Remove note">×</button>` : ""}</div>`).join("")
+    || `<div class="n" style="color:#999">No fair notes yet.</div>`}
+    <form data-slot="fair"><input placeholder="Add a note for the whole fair" maxlength="140"><button>Add</button></form>`;
   $("#btnPaper").hidden = !(isAdmin && YEAR === 2026 && signups.length === 0);
   $("#btnLastYear").hidden = !(isAdmin && YEAR === 2026 && !Object.keys(prevTotals || {}).length);
   $("#shortCount").textContent = short;

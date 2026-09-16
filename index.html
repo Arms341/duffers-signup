@@ -110,23 +110,26 @@
     @page { size: letter landscape; margin: 0.35in; }
     body > *:not(#printSheet) { display: none !important; }
     #printSheet { display: block; }
-    html, body { background: #fff; font-size: 9pt; }
+    html, body { background: #fff !important; font-size: 9pt; }
   }
   #printSheet, #printSheet * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-  #printSheet { font-family: Arial, Helvetica, sans-serif; color: #000; }
-  #printSheet h1 { text-align: center; font-size: 15pt; margin: 0 0 6px; letter-spacing: .3px; }
-  #printSheet .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; border: 1.5px solid #000; }
-  #printSheet .pday { border-right: 1px solid #000; border-bottom: 1px solid #000; background: #595959; }
-  #printSheet .pday:nth-child(5n) { border-right: 0; }
-  #printSheet .pday.last-row { border-bottom: 0; }
-  #printSheet .pdate { background: #f4b183; font-weight: 700; font-size: 8.5pt; height: 17px; line-height: 16px; padding: 0 4px; border-bottom: 1px solid #000; }
-  #printSheet .pshift { background: #a6a6a6; font-weight: 700; font-size: 8pt; height: 15px; line-height: 13px; padding: 0 4px; border-top: 1px solid #000; border-bottom: 1px solid #000; white-space: nowrap; overflow: hidden; }
-  #printSheet .pline { background: #fff; height: 15px; border-bottom: 1px solid #000; padding: 0 4px; font-size: 9.5pt; line-height: 15px; white-space: nowrap; overflow: hidden; }
-  #printSheet .pline.open { background: #fff2b3; }
-  #printSheet .pline.filler { background: #595959; }
-  #printSheet .pnotice { background: #fff2b3; text-align: center; font-weight: 700; font-size: 8.5pt; height: 105px; padding: 0 6px; line-height: 15px; white-space: pre-line; }
-  #printSheet .pfoot { color: #c00; font-weight: 700; text-align: center; font-size: 10pt; margin-top: 6px; letter-spacing: .3px; }
-  #printSheet .purl { text-align: center; font-size: 12pt; margin-top: 4px; letter-spacing: .2px; }
+  #printSheet { font-family: Arial, Helvetica, sans-serif; color: #000; --L: 17px; }
+  #printSheet h1 { text-align: center; font-size: 16pt; margin: 0 0 8px; }
+  #printSheet .prow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1.5px solid #000; border-bottom: 0; }
+  #printSheet .prow.second { border-top: 0; }
+  #printSheet .pgap { height: 10px; background: #000; }           /* the black bar between the two rows */
+  #printSheet .pday { border-right: 1px solid #000; background: #595959; min-width: 0; }
+  #printSheet .pday:last-child { border-right: 0; }
+  #printSheet .pdate { background: #ff6600; font-weight: 700; font-style: italic; font-size: 9.5pt; height: var(--L); line-height: var(--L); padding: 0 4px; border-bottom: 1px solid #000; white-space: nowrap; overflow: hidden; }
+  #printSheet .pshift { background: #bfbfbf; font-weight: 700; font-size: 9.5pt; height: var(--L); line-height: 15px; padding: 0 4px; border-top: 1px solid #000; border-bottom: 1px solid #000; white-space: nowrap; overflow: hidden; }
+  #printSheet .pshift.small { font-size: 8.5pt; }
+  #printSheet .pline { background: #ffff00; height: var(--L); line-height: var(--L); border-bottom: 1px solid #8c8c8c; padding: 0 4px; font-size: 10pt; font-weight: 700; white-space: nowrap; overflow: hidden; }
+  #printSheet .pline.open { background: #ffff00; }
+  #printSheet .pline.filler { background: #595959; border-bottom-color: #3d3d3d; }
+  #printSheet .pline.filler.blue { background: #bdd7ee; border-bottom-color: #8c8c8c; }
+  #printSheet .pnotice { background: #ffff00; text-align: center; font-weight: 700; font-size: 9.5pt; height: calc(var(--L) * 7); padding: 0 6px; line-height: var(--L); white-space: pre-line; }
+  #printSheet .pfoot { color: #f00; font-weight: 700; text-align: center; font-size: 10.5pt; margin-top: 4px; border: 1.5px solid #000; border-top: 0; padding: 3px; background: #fff; }
+  #printSheet .purl { text-align: center; font-size: 12pt; margin-top: 6px; }
   #printSheet .purl b { font-size: 13pt; }
   #printSheet .pmeta { text-align: right; font-size: 7.5pt; color: #444; margin-top: 3px; }
   @media (max-width: 480px) {
@@ -258,7 +261,7 @@ const ADMIN_CODE = "0399";
    opening-night volunteers who are not on the Duffers link. */
 const TEMPLATE = {
   opening:  [["7:00 PM", "Close"],
-             ["7:00 PM", "Close", { key: "vol", title: "Non-Theta Volunteers", free: true, need: 4 }]],  // first Thursday
+             ["7:00 PM", "Close", { key: "vol", title: "Non-Theta Volunteers - If Needed", free: true, need: 4 }]],  // first Thursday
   friday:   [["9:30 AM", "2:00 PM"], ["2:00 PM", "5:00 PM"], ["5:00 PM", "Close"]],
   saturday: [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
   sunday:   [["9:30 AM", "3:00 PM"], ["3:00 PM", "7:00 PM"], ["7:00 PM", "Close"]],
@@ -682,7 +685,8 @@ function buildPrintSheet() {
     const id = slotId(day.key, s), need = needsFor(s, di);
     const names = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0)).map(x => x.name);
     const rows = Math.max(need, names.length);
-    let html = `<div class="pshift">${shiftTitle(s)}</div>`;
+    // In the column width, the volunteer bar keeps its title and drops the (identical) times.
+    let html = s[2]?.title ? `<div class="pshift small">${esc(s[2].title)}</div>` : `<div class="pshift">${s[0]} to ${s[1]}</div>`;
     for (let i = 0; i < rows; i++) html += `<div class="pline${names[i] ? "" : " open"}">${names[i] ? esc(names[i]) : ""}</div>`;
     return { html, lines: 1 + rows };
   };
@@ -694,20 +698,20 @@ function buildPrintSheet() {
     for (const b of blocks) { top += b.html; topLines += b.lines; }
     return { day, di, top, topLines, last };
   });
-  const filler = n => Array.from({ length: Math.max(0, n) }, () => `<div class="pline filler"></div>`).join("");
-  const rowsHtml = [parts.slice(0, 5), parts.slice(5)].map(row => {
-    // Only days with the SAME number of shifts align their evening bar with each other (the
-    // three-shift weekend days together, the two-shift weekdays together). A short mid-shift gets
-    // just the grey it needs above its last shift; nothing is stretched to the tallest column.
-    const groupTop = p => Math.max(...row.filter(q => q.day.shifts.length === p.day.shifts.length && q.di !== 0).map(q => q.topLines), p.topLines);
+  const filler = (n, blueFirst) => Array.from({ length: Math.max(0, n) }, (_, i) => `<div class="pline filler${blueFirst && i === 0 ? " blue" : ""}"></div>`).join("");
+  const rowsHtml = [parts.slice(0, 5), parts.slice(5)].map((row, ri) => {
+    // Like the 2025 sheet: closing shifts that start at the same TIME line up with each other
+    // (all the 5 PM closes on one line, all the 7 PM closes on another). Thursday stands alone.
+    const key = p => p.di === 0 ? "thu" : shiftLabel(p.day.shifts[p.day.shifts.length - 1]);
+    const groupTop = p => Math.max(...row.filter(q => key(q) === key(p)).map(q => q.topLines));
     const total = p => groupTop(p) + p.last.lines;
     const maxTotal = Math.max(...row.map(total));
-    return row.map(p => `<div class="pday${p.di >= 5 ? " last-row" : ""}"><div class="pdate">${
+    return `<div class="prow${ri ? " second" : ""}">` + row.map(p => `<div class="pday"><div class="pdate">${
         p.day.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${p.day.date.toLocaleDateString("en-US", { weekday: "long" })}</div>${
-        p.top}${filler(groupTop(p) - p.topLines)}${p.last.html}${filler(maxTotal - total(p))}</div>`).join("");
-  }).join("");
+        p.top}${filler(groupTop(p) - p.topLines, true)}${p.last.html}${filler(maxTotal - total(p), false)}</div>`).join("") + `</div>`;
+  }).join(`<div class="pgap"></div>`);
   $("#printSheet").innerHTML = `<h1>SOUTH PLAINS DUFFERS CORNDOG BOOTH SCHEDULE ${YEAR}</h1>
-    <div class="grid">${rowsHtml}</div>
+    ${rowsHtml}
     <div class="pfoot">PLEASE FILL IN ALL THE YELLOW SLOTS FIRST!!!!</div>
     <div class="purl">Sign up online: <b>${SITE_URL}</b></div>
     <div class="pmeta">Printed ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })} — the website is always current; this paper is not.</div>`;

@@ -213,11 +213,15 @@
 
 <dialog id="calDlg">
   <h3>Save my shifts to my calendar</h3>
-  <p style="margin:0 0 10px;font-size:14px;color:#555">Pick your phone (on a computer with Gmail, use the Google one). <b>Subscribe</b> means your calendar stays in step with the sheet on its own — add or drop a shift here and your calendar follows, with no doubles. You only do this once.</p>
-  <button class="btn" id="calApple" style="width:100%;margin-bottom:8px">📱 iPhone / iPad — Subscribe</button>
-  <button class="btn" id="calGoogle" style="width:100%;margin-bottom:8px">🤖 Android / Google Calendar / Gmail — Subscribe</button>
-  <button class="btn" id="calFile" style="width:100%;background:#eee;font-weight:500">Just give me a one-time file instead</button>
-  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="calCancel">Cancel</button></div>
+  <p style="margin:0 0 10px;font-size:14px;color:#555">Pick your phone.</p>
+  <button class="btn" id="calApple" style="width:100%;margin-bottom:8px;text-align:left">📱 <b>iPhone / iPad</b> — Subscribe<br><span style="font-weight:400;font-size:13px">Goes in the built-in Calendar app and keeps itself up to date.</span></button>
+  <button class="btn" id="calFile" style="width:100%;margin-bottom:8px;text-align:left">🤖 <b>Android</b> — Add to calendar<br><span style="font-weight:400;font-size:13px">Opens in Google Calendar. Add a shift later? Tap this again — it only adds what's new.</span></button>
+  <button class="btn" id="calGoogle" style="width:100%;margin-bottom:8px;background:#eee;text-align:left"><b>Google Calendar on a computer</b> — copy link<br><span style="font-weight:400;font-size:13px">For those who want Gmail's calendar to update itself.</span></button>
+  <div id="calLink" hidden style="font-size:13px;background:#f6f4ef;border-radius:8px;padding:10px;margin-bottom:8px">
+    Link copied. On a <b>computer</b>: calendar.google.com → ⚙ Settings → <b>Add calendar</b> → <b>From URL</b> → paste → Add calendar.
+    <div style="margin-top:6px;word-break:break-all;font-family:monospace;font-size:12px" id="calLinkText"></div>
+  </div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="calCancel">Close</button></div>
 </dialog>
 
 <dialog id="moneyDlg">
@@ -773,9 +777,14 @@ $("#btnCal").onclick = () => {
   if (!signups.some(x => x.name.toLowerCase() === myName.toLowerCase())) { alert("You're not on any shifts yet — tap + Sign me up first."); return; }
   $("#calDlg").showModal();
 };
-$("#calCancel").onclick = () => $("#calDlg").close();
+$("#calCancel").onclick = () => { $("#calDlg").close(); $("#calLink").hidden = true; };
 $("#calApple").onclick = () => { $("#calDlg").close(); location.href = "webcal://" + feedUrl(); };
-$("#calGoogle").onclick = () => { $("#calDlg").close(); window.open("https://calendar.google.com/calendar/u/0/r?cid=" + encodeURIComponent("https://" + feedUrl()), "_blank"); };
+$("#calGoogle").onclick = async () => {
+  // Google only takes a calendar link through Settings on a computer; hand them the link + the steps.
+  const url = "https://" + feedUrl();
+  try { await navigator.clipboard.writeText(url); } catch (e) {}
+  $("#calLinkText").textContent = url; $("#calLink").hidden = false;
+};
 $("#calFile").onclick = () => {
   $("#calDlg").close();
   const ics = buildIcs(myName); if (!ics) return;

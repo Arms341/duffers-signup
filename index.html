@@ -542,7 +542,7 @@ async function start() {
     const col = db.collection("sheets").doc(String(YEAR)).collection("signups");
     col.onSnapshot(snap => {
       signups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setLive(true); render();
+      setLive(true); render(); maybeAutoPrint();
     }, e => { showErr("Live updates lost: " + e.message); setLive(false); });
     db.collection("sheets").doc(String(YEAR)).onSnapshot(d => {
       meta = { locked: false, needs: {}, totals: {}, ...(d.exists ? d.data() : {}) };
@@ -1301,7 +1301,23 @@ $("#calFile").onclick = () => {
   a.download = `duffers-shifts-${YEAR}.ics`; document.body.appendChild(a); a.click(); a.remove();
 };
 
-$("#btnPrint").onclick = () => { buildPrintSheet(); setTimeout(() => window.print(), 50); };
+/* iPhone home-screen apps can't print (no print sheet in standalone mode) — hand off to Safari with ?print=1,
+   which prints as soon as the sign-ups have loaded. */
+const STANDALONE = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+$("#btnPrint").onclick = () => {
+  if (STANDALONE && /iPhone|iPad/i.test(navigator.userAgent)) {
+    const a = document.createElement("a"); a.href = location.origin + "/?print=1"; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+    append_ok("Opening the sheet in Safari to print — the home-screen app can't print on iPhone.");
+    return;
+  }
+  buildPrintSheet(); setTimeout(() => window.print(), 50);
+};
+let autoPrinted = false;
+function maybeAutoPrint() {
+  if (autoPrinted || !/[?&]print=1/.test(location.search) || !signups.length) return;
+  autoPrinted = true; history.replaceState(null, "", "/");
+  setTimeout(() => { buildPrintSheet(); window.print(); }, 400);
+}
 window.addEventListener("beforeprint", buildPrintSheet);   // Ctrl+P / Share > Print also get a fresh sheet
 
 $("#btnExport").onclick = () => {

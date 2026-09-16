@@ -42,6 +42,17 @@
   .a2hs .txt { flex: 1; min-width: 200px; }
   .a2hs .btn { font-size: 13px; padding: 8px 12px; }
   .a2hs .no { background: none; border: 0; color: #7a6a20; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+  /* "Right now" card — only during the fair */
+  .now-card { background: var(--maroon-dark); color: #fff; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; box-shadow: inset 0 0 0 2px var(--gold-deep); }
+  .now-card .nrow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 4px 0; }
+  .now-card .nrow + .nrow { border-top: 1px solid rgba(255,255,255,.18); }
+  .now-card .tag { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--gold); min-width: 74px; }
+  .now-card .when { font-weight: 700; }
+  .now-card .who { color: #f6e7c1; }
+  .now-card .who b { color: #fff; }
+  .now-card .open { color: #ffd166; font-weight: 700; }
+  .now-card .none { color: #f6e7c1; font-style: italic; }
+  .now-card .nrow[data-jump] { cursor: pointer; }
   /* "My shifts" strip under the name */
   .mine-strip { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--maroon); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
   .mine-strip b { color: var(--maroon); }
@@ -200,6 +211,7 @@
     .notice { font-size: 16px; }
     .howto { font-size: 15px; }
     .stats { font-size: 15px; }
+    .now-card { font-size: 16px; } .now-card .tag { font-size: 12px; }
     .mine-strip { font-size: 16px; } .mine-strip .chip { font-size: 16px; padding: 8px 14px; }
     .a2hs { font-size: 15px; }
     .tile .lbl { font-size: 12px; } .tile .val { font-size: 22px; }
@@ -239,6 +251,7 @@
 
 <main>
   <div id="a2hs" class="a2hs"><span class="txt" id="a2hsText"></span><button class="btn" id="a2hsBtn" hidden>Install</button><button class="no" id="a2hsNo">Not now</button></div>
+  <div id="nowCard" class="now-card" hidden></div>
   <div id="mineStrip" class="mine-strip" hidden></div>
   <div id="notice" class="notice">If you cannot work your scheduled shift, <b>it is your responsibility</b> to find coverage. Please fill in the <b>yellow</b> slots first.</div>
   <div id="err" class="notice err" hidden></div>
@@ -592,8 +605,42 @@ function render() {
   $("#totalCount").textContent = signups.length;
   $("#mineCount").textContent = mine + " shift" + (mine === 1 ? "" : "s");
   renderMine(myShifts);
+  renderNow();
   renderTotals();
 }
+/* "Right now" card: during the fair, the shift that's on at this moment and the one after it, with names.
+   Between shifts (or before the first day) it shows what's next. Hidden outside the fair. "Close" = 11 PM. */
+function shiftTimes(day, s) {
+  const t = str => { if (str === "Close") return [23, 0]; const m = str.match(/(\d+):(\d+)\s*(AM|PM)/i); let h = +m[1] % 12; if (m[3].toUpperCase() === "PM") h += 12; return [h, +m[2]]; };
+  const at = ([h, mi]) => { const d = new Date(day.date); d.setHours(h, mi, 0, 0); return d; };
+  return [at(t(s[0])), at(t(s[1]))];
+}
+function renderNow() {
+  const el = $("#nowCard"), now = new Date();
+  const first = new Date(DAYS[0].date); first.setHours(0, 0, 0, 0);
+  const last = new Date(DAYS[9].date); last.setHours(23, 59, 59, 0);
+  if (now < first || now > last) { el.hidden = true; return; }
+  const all = [];
+  DAYS.forEach((day, di) => day.shifts.forEach(s => { if (s[2]?.free) return; const [a, b] = shiftTimes(day, s); all.push({ day, di, s, a, b, id: slotId(day.key, s) }); }));
+  const cur = all.find(x => x.a <= now && now < x.b);
+  const next = all.find(x => x.a > now);
+  const row = (tag, x) => {
+    if (!x) return `<div class="nrow"><span class="tag">${tag}</span><span class="none">nothing more scheduled</span></div>`;
+    const names = signups.filter(r => r.slot === x.id).sort((p, q) => (p.ts?.seconds || 0) - (q.ts?.seconds || 0)).map(r => r.name);
+    const need = needsFor(x.s, x.di), open = need - names.length;
+    const sameDay = x.day.key === now.toISOString().slice(0, 10);
+    const when = `${sameDay ? "" : shortDay(x.day.date) + " · "}${shortTime(x.s[0])}–${shortTime(x.s[1])}`;
+    return `<div class="nrow" data-jump="slot-${x.id}"><span class="tag">${tag}</span><span class="when">${when}</span>
+      <span class="who">${names.length ? names.map(n => `<b>${esc(n)}</b>`).join(", ") : "<i>nobody signed up</i>"}${open > 0 ? ` <span class="open">· ${open} open</span>` : ""}</span></div>`;
+  };
+  el.hidden = false;
+  el.innerHTML = cur ? row("Right now", cur) + row("Up next", next) : row("Up next", next) + (next ? row("Then", all.find(x => x.a > next.a)) : "");
+}
+$("#nowCard").addEventListener("click", e => {
+  const c = e.target.closest("[data-jump]"); if (!c) return;
+  const t = document.getElementById(c.dataset.jump); if (t) { t.scrollIntoView({ behavior: "smooth", block: "center" }); t.style.outline = "3px solid var(--gold-deep)"; setTimeout(() => t.style.outline = "", 1600); }
+});
+setInterval(() => { try { renderNow(); } catch (e) {} }, 60000);
 /* "Your shifts" strip: answers "when do I work?" without scrolling ten days. Tap a chip to jump to it. */
 function shortDay(d) { return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); }
 function shortTime(t) { return t.replace(":00", "").replace(" PM", " PM").replace(" AM", " AM"); }

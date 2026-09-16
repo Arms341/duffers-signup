@@ -90,6 +90,11 @@ name instructions · totals disclaimer · "Running late? Add a note" tip · **Da
   shift divs have `id="slot-<slotId>"`); admin **"Copy open shifts for GroupMe"** → editable text of every
   under-headcount shift + link + lodge code, Copy button.
 
+- **"Right now" card** (dark maroon, top of page, fair days only, refreshes every minute): current shift + names +
+  "N open", and Up next; between shifts shows Up next / Then. Tap a row to jump to that shift. Volunteer block excluded.
+- **Clear day** button in the count dialog wipes a night (numbers, sigs, photo) after confirm.
+- Branden said NO "need a sub" feature — don't build one.
+
 ## 6. Calendar
 - Button opens a dialog: iPhone → `webcal://` subscribe to `api/cal?name=...` (live, updates hourly);
   Android → downloads an `.ics`; Google Calendar on a computer → copies the feed link with

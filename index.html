@@ -168,6 +168,7 @@
     <input id="myName" placeholder="Your name (as the crew knows you)" autocomplete="name" maxlength="40">
     <button id="saveName">Save</button>
     <button id="btnPrint" class="btn ghost" title="Print the sheet the way the paper looks">🖨 Print</button>
+    <button id="btnCal" class="btn ghost" title="Put the shifts you signed up for on your phone's calendar">📅 My shifts</button>
   </div>
 </header>
 
@@ -715,6 +716,47 @@ function buildPrintSheet() {
     <div class="pfoot">PLEASE FILL IN ALL THE YELLOW SLOTS FIRST!!!!</div>
     <div class="purl">Sign up online: <b>${SITE_URL}</b></div>`;
 }
+/* ---- "My shifts" -> a calendar file with every shift this person is on. Opens straight into the
+   phone's calendar (iPhone: Calendar; Android: Google Calendar; PC: Outlook). No account needed. ---- */
+const CLOSE_HOUR = 23;   // "Close" has no clock time; 11 PM keeps the block on the right evening
+function to24(t) { const m = /(\d+):(\d+) (AM|PM)/.exec(t); if (!m) return null; let h = +m[1] % 12; if (m[3] === "PM") h += 12; return [h, +m[2]]; }
+function icsStamp(d, h, mi) { const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(h)}${p(mi)}00`; }
+function buildIcs(name) {
+  const mine = [];
+  DAYS.forEach((day, di) => day.shifts.forEach(s => {
+    const id = slotId(day.key, s);
+    if (!signups.some(x => x.slot === id && x.name.toLowerCase() === name.toLowerCase())) return;
+    const st = to24(s[0]) || [9, 30], en = s[1] === "Close" ? [CLOSE_HOUR, 0] : (to24(s[1]) || [23, 0]);
+    const others = signups.filter(x => x.slot === id && x.name.toLowerCase() !== name.toLowerCase()).map(x => x.name).join(", ");
+    mine.push([
+      "BEGIN:VEVENT",
+      `UID:${id}-${name.replace(/\W+/g, "")}@duffers-signup`,
+      `DTSTAMP:${icsStamp(new Date(), new Date().getHours(), new Date().getMinutes())}`,
+      `DTSTART;TZID=America/Chicago:${icsStamp(day.date, st[0], st[1])}`,
+      `DTEND;TZID=America/Chicago:${icsStamp(day.date, en[0], en[1])}`,
+      `SUMMARY:Duffers Corndog Booth — ${s[2]?.title ? s[2].title + " " : ""}${s[0]} to ${s[1]}`,
+      "LOCATION:South Plains Fair — Duffers Corndog Booth",
+      `DESCRIPTION:Working with: ${others || "(nobody else yet)"}\\nLive sheet: https://${SITE_URL}`,
+      "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:Corndog booth shift in 2 hours", "END:VALARM",
+      "END:VEVENT",
+    ].join("\r\n"));
+  }));
+  if (!mine.length) return null;
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Duffers//Corndog Booth//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VTIMEZONE", "TZID:America/Chicago",
+    "BEGIN:STANDARD", "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "TZOFFSETFROM:-0500", "TZOFFSETTO:-0600", "END:STANDARD",
+    "BEGIN:DAYLIGHT", "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "TZOFFSETFROM:-0600", "TZOFFSETTO:-0500", "END:DAYLIGHT",
+    "END:VTIMEZONE", ...mine, "END:VCALENDAR"].join("\r\n") + "\r\n";
+}
+$("#btnCal").onclick = () => {
+  if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
+  const ics = buildIcs(myName);
+  if (!ics) { alert("You're not on any shifts yet — tap + Sign me up first."); return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+  a.download = `duffers-shifts-${YEAR}.ics`; document.body.appendChild(a); a.click(); a.remove();
+};
+
 $("#btnPrint").onclick = () => { buildPrintSheet(); setTimeout(() => window.print(), 50); };
 window.addEventListener("beforeprint", buildPrintSheet);   // Ctrl+P / Share > Print also get a fresh sheet
 

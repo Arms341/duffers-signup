@@ -215,7 +215,7 @@
   <h3>Save my shifts to my calendar</h3>
   <p style="margin:0 0 10px;font-size:14px;color:#555">Pick your phone.</p>
   <button class="btn" id="calApple" style="width:100%;margin-bottom:8px;text-align:left">📱 <b>iPhone / iPad</b> — Subscribe<br><span style="font-weight:400;font-size:13px">Goes in the built-in Calendar app and keeps itself up to date.</span></button>
-  <button class="btn" id="calFile" style="width:100%;margin-bottom:8px;text-align:left">🤖 <b>Android</b> — Add to calendar<br><span style="font-weight:400;font-size:13px">Opens in Google Calendar. Add a shift later? Tap this again — it only adds what's new.</span></button>
+  <button class="btn" id="calFile" style="width:100%;margin-bottom:8px;text-align:left">🤖 <b>Android</b> — Add to calendar<br><span style="font-weight:400;font-size:13px">Opens in Google Calendar. Add a shift later? Tap this again — it only adds what's new. <b>iPhone users: use the button above, not this one.</b></span></button>
   <button class="btn" id="calGoogle" style="width:100%;margin-bottom:8px;background:#eee;text-align:left"><b>Google Calendar on a computer</b> — copy link<br><span style="font-weight:400;font-size:13px">For those who want Gmail's calendar to update itself.</span></button>
   <div id="calLink" hidden style="font-size:13px;background:#f6f4ef;border-radius:8px;padding:10px;margin-bottom:8px">
     Link copied. On a <b>computer</b>: calendar.google.com → ⚙ Settings → <b>Add calendar</b> → <b>From URL</b> → paste → Add calendar.
@@ -786,6 +786,7 @@ $("#calGoogle").onclick = async () => {
   $("#calLinkText").textContent = url; $("#calLink").hidden = false;
 };
 $("#calFile").onclick = () => {
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) { $("#calApple").click(); return; }   // wrong button on an iPhone: do the right thing anyway
   $("#calDlg").close();
   const ics = buildIcs(myName); if (!ics) return;
   const a = document.createElement("a");

@@ -112,6 +112,49 @@
   /* Until the lodge code is entered, the sheet does not exist on the page at all. */
   body.locked > header, body.locked > main, body.locked > footer, body.locked > #lockedBanner { display: none !important; }
   body.locked { background: var(--maroon); }
+  /* ---- Daily Cash Count dialog: the paper "Daily Cash Count" sheet, line for line ---- */
+  #moneyDlg { width: min(94vw, 470px); max-height: 92vh; overflow-y: auto; }
+  .cc-note { font-size: 12px; color: #777; font-style: italic; margin: 0 0 6px; }
+  .cc-h { font-size: 12px; font-weight: 700; margin: 12px 0 4px; color: var(--maroon); text-transform: uppercase; letter-spacing: .4px; }
+  .cc-bills { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 6px 8px; align-items: center; margin: 0; font-size: 14px; }
+  .cc-bills .d { font-weight: 700; color: #444; }
+  .cc-bills input { margin: 0; padding: 8px; text-align: right; }
+  .cc-bills .amt { text-align: right; font-weight: 700; color: #333; font-variant-numeric: tabular-nums; }
+  .cc-bills .amt.zero { color: #bbb; font-weight: 400; }
+  .cc-bills .hd { font-size: 11px; color: #888; font-weight: 400; text-transform: uppercase; letter-spacing: .3px; }
+  .cc-grid { display: grid; grid-template-columns: 1fr 130px; gap: 6px 10px; align-items: center; font-size: 14px; margin-top: 6px; }
+  .cc-grid input { margin: 0; text-align: right; padding: 9px; font-weight: 700; }
+  .cc-grid input.auto { background: #f2f0ea; color: #333; }
+  .cc-n { display: inline-block; width: 16px; color: #999; font-size: 12px; }
+  .cc-total { display: flex; justify-content: space-between; align-items: center; background: var(--gold); border: 1px solid var(--gold-deep);
+    border-radius: 8px; padding: 8px 12px; margin: 8px 0 2px; font-weight: 700; font-size: 14px; }
+  .cc-total small { font-weight: 400; color: #666; }
+  .cc-total b { font-size: 24px; }
+  .cc-err { color: #a33; font-size: 13px; font-weight: 600; margin: 6px 0 0; }
+  .sig { border: 1px solid #bbb; border-radius: 8px; background: #fff; width: 100%; height: 110px; touch-action: none; display: block; margin-top: 4px; }
+  .sig-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #888; margin: 2px 0 6px; }
+  .sig-row button { background: none; border: 0; color: #a33; font-size: 13px; cursor: pointer; padding: 0; }
+  #moneyDlg input[id^="ccName"] { margin: 6px 0 0; }
+  /* Printed copy of one day's count sheet (portrait, goes in the bank bag) */
+  #countPrint { display: none; }
+  @media print {
+    body.print-count > *:not(#countPrint) { display: none !important; }
+    body.print-count > #countPrint { display: block !important; }
+  }
+  #countPrint { page: countpage; font-family: Calibri, Arial, Helvetica, sans-serif; color: #000; font-size: 12pt; padding: 0.4in 0.6in; }
+  @page countpage { size: letter portrait; margin: 0.4in; }
+  #countPrint h1 { text-align: center; font-size: 15pt; margin: 0 0 14px; }
+  #countPrint .cl { display: grid; grid-template-columns: 1.4in 1fr 2in; align-items: center; margin: 0 0 14px; }
+  #countPrint .cl .box { border: 1.5px solid #000; height: 34px; line-height: 34px; padding: 0 8px; font-size: 14pt; text-align: right; font-family: Arial, sans-serif; }
+  #countPrint .sigs { margin: 26px 0 0; }
+  #countPrint .sg { display: grid; grid-template-columns: 1in 2.6in 1.1in 1fr; align-items: end; margin: 0 0 18px; }
+  #countPrint .sg .ln { border-bottom: 1px solid #000; height: 60px; position: relative; }
+  #countPrint .sg .ln img { position: absolute; left: 0; bottom: 0; height: 60px; max-width: 100%; }
+  #countPrint .sg .nm { border-bottom: 1px solid #000; height: 60px; line-height: 60px; padding-left: 6px; font-size: 14pt; }
+  #countPrint .instr { font-weight: 700; font-style: italic; margin: 6px 0 22px; }
+  #countPrint .ws { display: grid; grid-template-columns: 0.6in 3.4in; gap: 4px 8px; align-items: end; }
+  #countPrint .ws .v { border-bottom: 1px solid #000; height: 18px; font-family: Arial, sans-serif; }
+  #countPrint .ws .t { font-weight: 700; margin-top: 8px; }
   /* ---- PRINT SHEET: the paper layout. Hidden on screen; the only thing shown when printing. ---- */
   #printSheet { display: none; }
   @media print {
@@ -236,12 +279,38 @@
 </dialog>
 
 <dialog id="moneyDlg">
-  <h3 id="moneyTitle">Deposit</h3>
-  <p style="margin:0 0 4px;font-size:13px;color:#555">Enter after the bank deposit. Whole dollars are fine.</p>
-  <label style="font-size:13px">This year's deposit for the day<input id="tyIn" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$"></label>
+  <h3 id="moneyTitle">Daily Cash Count</h3>
+  <p class="cc-note">Same lines as the paper sheet. Count the bills; the app does the multiplying and adding.</p>
+  <div class="cc-h">Worksheet — count the bills, the app does the math</div>
+  <div class="cc-bills" id="ccBills">
+    <span class="hd">Bill</span><span class="hd" style="text-align:right">How many</span><span class="hd" style="text-align:right">Amount</span>
+    <span class="d">1's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="1" placeholder="0"><span class="amt zero" data-amt="1">$0</span>
+    <span class="d">5's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="5" placeholder="0"><span class="amt zero" data-amt="5">$0</span>
+    <span class="d">10's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="10" placeholder="0"><span class="amt zero" data-amt="10">$0</span>
+    <span class="d">20's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="20" placeholder="0"><span class="amt zero" data-amt="20">$0</span>
+    <span class="d">50's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="50" placeholder="0"><span class="amt zero" data-amt="50">$0</span>
+    <span class="d">100's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="100" placeholder="0"><span class="amt zero" data-amt="100">$0</span>
+  </div>
+  <p class="cc-note" style="margin-top:6px">Rolled coin or a strapped bundle? Count it as bills (a $100 strap of 1's = 100). No bills counted? Type the cash total on line 1 instead.</p>
+  <div class="cc-grid">
+    <span><span class="cc-n">1</span>Total Cash Count</span><input id="ccCash" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$">
+    <span><span class="cc-n">2</span>Credit Card Sales</span><input id="ccCard" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$">
+    <span><span class="cc-n">3</span>Starting Bank</span><input id="ccBank" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$">
+  </div>
+  <div class="cc-total"><span><span class="cc-n">4</span>Total Sales <small>(line 1 + line 2 − line 3)</small></span><b id="ccTotal">$ –</b></div>
   <label style="font-size:13px" id="lyWrap">Last year's total for this day (if you know it)<input id="lyIn" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$"></label>
-  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="moneyOk">Save</button></div>
+  <div class="cc-h">Counted &amp; verified by 2 assigned Duffers</div>
+  <input id="ccName1" placeholder="Printed name" maxlength="40" autocomplete="off" autocapitalize="words">
+  <canvas class="sig" id="ccSig1"></canvas>
+  <div class="sig-row"><span>Sign above with your finger</span><button type="button" data-clear="1">Clear</button></div>
+  <input id="ccName2" placeholder="Printed name" maxlength="40" autocomplete="off" autocapitalize="words">
+  <canvas class="sig" id="ccSig2"></canvas>
+  <div class="sig-row"><span>Sign above with your finger</span><button type="button" data-clear="2">Clear</button></div>
+  <p class="cc-note" style="margin-top:4px"><b>Put ALL cash in the bank bag.</b> Tomorrow's bag will have its own new bank in it.</p>
+  <div class="cc-err" id="ccErr" hidden></div>
+  <div class="row"><button class="btn ghost" style="color:#333;border-color:#999" id="moneyCancel">Cancel</button><button class="btn" id="ccPrint" style="background:#e8e6df" hidden>Print</button><button class="btn" id="moneyOk">Save</button></div>
 </dialog>
+<div id="countPrint"></div>
 
 <footer>
   <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
@@ -451,7 +520,7 @@ function render() {
     const ly = lastYearFor(di), ty = meta.totals?.[di]?.amount;
     el.innerHTML = `<h2><span>${fmtDay(day.date)}${day.key === today ? "<small>today</small>" : ""}</span>
       <span class="money"><span class="ly">LY ${ly == null ? "–" : money(ly)}</span><span class="ty">${ty == null ? "$ –" : money(ty)}</span>
-      <button class="plus" data-day="${di}" title="Enter this day's deposit">+</button></span></h2>`;
+      <button class="plus" data-day="${di}" title="Daily cash count for this day">+</button></span></h2>`;
     for (const s of day.shifts) {
       const id = slotId(day.key, s);
       const rows = signups.filter(x => x.slot === id).sort((a, b) => (a.ts?.seconds || 0) - (b.ts?.seconds || 0));
@@ -517,7 +586,7 @@ function renderTotals() {
     if (t != null) { ty += +t; anyTy = true; if (l != null) lySame += +l; }
     const p = pct(t, l);
     return `<tr><td>${fmtDay(day.date)}</td><td>${l == null ? "–" : money(l)}</td>
-      <td>${t == null ? "–" : money(t)}${meta.totals?.[di]?.by ? `<span class="by">by ${esc(meta.totals[di].by)}</span>` : ""}</td>
+      <td>${t == null ? "–" : money(t)}${countBy(meta.totals?.[di])}</td>
       <td class="${p == null ? "" : p >= 0 ? "up" : "down"}">${p == null ? "–" : pctStr(p)}</td></tr>`;
   });
   const pAll = anyTy ? pct(ty, lySame) : null;
@@ -530,6 +599,15 @@ function renderTotals() {
   const dEl = $("#diffTotal");
   dEl.textContent = pAll == null ? "–" : pctStr(pAll);
   dEl.className = "val " + (pAll == null ? "" : pAll >= 0 ? "up" : "down");
+}
+/* Small grey line under a day's total: cash / card split and who counted it. */
+function countBy(e) {
+  if (!e || e.amount == null) return "";
+  const bits = [];
+  if (e.cash != null || e.card != null) bits.push(`cash ${money(e.cash || 0)} · card ${money(e.card || 0)}`);
+  if (e.counters?.length) bits.push(`counted by ${e.counters.filter(Boolean).map(esc).join(" & ")}`);
+  else if (e.by) bits.push(`by ${esc(e.by)}`);
+  return bits.length ? `<span class="by">${bits.join(" · ")}</span>` : "";
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -619,28 +697,159 @@ document.addEventListener("submit", async e => {
 function sheet() { return db.collection("sheets").doc(String(YEAR)); }
 
 /* Daily deposit — the green +. Whoever makes the bank run enters it the next day. */
+/* The dialog is the paper "Daily Cash Count" sheet: worksheet by bill -> line 1, card sales, starting
+   bank, total sales = 1 + 2 - 3, then two printed names and two finger signatures. Everything is kept on
+   the day's totals entry: {amount(=total sales), cash, card, bank, bills, counters, sigs, by, ts}. */
 let moneyDay = null;
+const BILLS = ["1", "5", "10", "20", "50", "100"];
+const num = sel => { const v = $(sel).value.trim(); return v === "" || isNaN(+v) ? null : +v; };
+const billInputs = () => [...document.querySelectorAll("#ccBills input")];
+
+/* Finger-signature pad on a <canvas>. Stored as a small PNG data URL. */
+function sigPad(canvas) {
+  const ctx = canvas.getContext("2d");
+  let drawing = false, dirty = false, last = null, cssW = 0, cssH = 0;
+  function size() {
+    const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (!r.width) return false;
+    if (Math.round(r.width * dpr) !== canvas.width || Math.round(r.height * dpr) !== canvas.height) {
+      cssW = r.width; cssH = r.height;
+      canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#102a6b";
+    }
+    return true;
+  }
+  const pos = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  canvas.addEventListener("pointerdown", e => { size(); drawing = true; last = pos(e); try { canvas.setPointerCapture(e.pointerId); } catch (x) {} e.preventDefault(); });
+  canvas.addEventListener("pointermove", e => {
+    if (!drawing) return; const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p; dirty = true; e.preventDefault();
+  });
+  const up = () => { drawing = false; };
+  canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up); canvas.addEventListener("pointerleave", up);
+  return {
+    clear() { size(); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore(); dirty = false; },
+    isEmpty: () => !dirty,
+    data() {   // shrink to a fixed 400x110 so ten nights of signatures stay small in Firestore
+      if (!dirty) return null;
+      const o = document.createElement("canvas"); o.width = 400; o.height = 110;
+      o.getContext("2d").drawImage(canvas, 0, 0, 400, 110);
+      return o.toDataURL("image/png");
+    },
+    load(url) {
+      this.clear(); if (!url) return;
+      const img = new Image();
+      img.onload = () => { if (!size()) return; ctx.drawImage(img, 0, 0, cssW || canvas.getBoundingClientRect().width, cssH || canvas.getBoundingClientRect().height); dirty = true; };
+      img.src = url;
+    }
+  };
+}
+const pads = [sigPad($("#ccSig1")), sigPad($("#ccSig2"))];
+document.querySelectorAll("#moneyDlg [data-clear]").forEach(b => b.onclick = () => pads[+b.dataset.clear - 1].clear());
+
+/* Worksheet -> line 1. Each line is a COUNT of bills; amount = count x denomination. While any line has a
+   count, line 1 is the sum and is not typed by hand. */
+function billAmounts() {
+  const out = {};
+  billInputs().forEach(i => { const c = i.value.trim(); if (c !== "" && !isNaN(+c)) out[i.dataset.bill] = Math.round(+c) * +i.dataset.bill; });
+  return out;
+}
+function syncCash() {
+  const amts = billAmounts(), any = Object.keys(amts).length > 0;
+  document.querySelectorAll("#ccBills .amt").forEach(el => { const a = amts[el.dataset.amt]; el.textContent = money(a || 0); el.classList.toggle("zero", !a); });
+  const cash = $("#ccCash");
+  cash.classList.toggle("auto", any); cash.readOnly = any;
+  if (any) cash.value = Object.values(amts).reduce((a, v) => a + v, 0);
+  syncTotal();
+}
+function ccTotal() {
+  const cash = num("#ccCash"), card = num("#ccCard"), bank = num("#ccBank");
+  if (cash == null && card == null) return null;
+  return Math.round(((cash || 0) + (card || 0) - (bank || 0)) * 100) / 100;
+}
+function syncTotal() { const t = ccTotal(); $("#ccTotal").textContent = t == null ? "$ –" : money(t); }
+billInputs().forEach(i => i.addEventListener("input", syncCash));
+["#ccCash", "#ccCard", "#ccBank"].forEach(sel => $(sel).addEventListener("input", syncTotal));
+
 function openMoney(di) {
   if (!myName) { $("#myName").focus(); $("#myName").placeholder = "Type your name first, then Save"; return; }
   moneyDay = di;
-  $("#moneyTitle").textContent = `Deposit — ${fmtDay(DAYS[di].date)}`;
-  $("#tyIn").value = meta.totals?.[di]?.amount ?? "";
+  const e = meta.totals?.[di] || {};
+  $("#moneyTitle").textContent = `Daily Cash Count — ${fmtDay(DAYS[di].date)}`;
+  billInputs().forEach(i => i.value = e.counts?.[i.dataset.bill] ?? "");
+  $("#ccCash").value = e.cash ?? e.amount ?? "";
+  $("#ccCard").value = e.card ?? "";
+  let bank = e.bank; if (bank == null) { try { bank = localStorage.getItem("duffers.bank"); } catch (x) {} }
+  $("#ccBank").value = bank ?? 2000;
+  $("#ccName1").value = e.counters?.[0] ?? ""; $("#ccName2").value = e.counters?.[1] ?? "";
   const carried = prevTotals?.[di]?.amount;
   $("#lyWrap").hidden = carried != null;                 // already known from last year's sheet
-  $("#lyIn").value = carried ?? meta.totals?.[di]?.lastYear ?? "";
+  $("#lyIn").value = carried ?? e.lastYear ?? "";
+  $("#ccErr").hidden = true;
+  $("#ccPrint").hidden = e.amount == null;
   $("#moneyDlg").showModal();
+  syncCash();
+  // canvases have a size only once the dialog is showing
+  setTimeout(() => { pads[0].load(e.sigs?.[0]); pads[1].load(e.sigs?.[1]); }, 30);
 }
 $("#moneyCancel").onclick = () => $("#moneyDlg").close();
 $("#moneyOk").onclick = async () => {
-  const ty = $("#tyIn").value.trim(), ly = $("#lyIn").value.trim();
-  const FV = firebase.firestore.FieldValue, entry = {};
-  if (ty !== "") { entry.amount = +ty; entry.by = myName; entry.ts = FV.serverTimestamp(); }
-  else { entry.amount = FV.delete(); entry.by = FV.delete(); entry.ts = FV.delete(); }
+  const entry = {}, err = $("#ccErr");
+  const total = ccTotal(), ly = $("#lyIn").value.trim();
+  const n1 = $("#ccName1").value.trim(), n2 = $("#ccName2").value.trim();
+  err.hidden = true;
+  if (total != null) {
+    if (total < 0) { err.textContent = "Total sales came out negative — check the starting bank."; err.hidden = false; return; }
+    if (!n1 || !n2) { err.textContent = "Two Duffers have to count and print their names."; err.hidden = false; return; }
+    if (pads[0].isEmpty() || pads[1].isEmpty()) { if (!confirm("A signature is blank. Save anyway?")) return; }
+    var FV = firebase.firestore.FieldValue;
+    const bills = billAmounts(), counts = {};
+    billInputs().forEach(i => { if (i.value.trim() !== "") counts[i.dataset.bill] = Math.round(+i.value); });
+    Object.assign(entry, {
+      amount: total, cash: num("#ccCash") ?? 0, card: num("#ccCard") ?? 0, bank: num("#ccBank") ?? 0,
+      bills, counts, counters: [n1, n2], sigs: [pads[0].data(), pads[1].data()], by: myName, ts: FV.serverTimestamp()
+    });
+    try { localStorage.setItem("duffers.bank", String(entry.bank)); } catch (x) {}
+  } else {
+    // everything blank = clear the day
+    var FV = firebase.firestore.FieldValue;
+    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts"]) entry[k] = FV.delete();
+  }
   if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
   try {
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
     $("#moneyDlg").close();
-  } catch (err) { showErr("Could not save deposit: " + err.message); }
+  } catch (err2) { showErr("Could not save the count: " + err2.message); }
+};
+
+/* Printed copy of the count sheet — portrait, same layout as the paper form, signatures included. */
+function buildCountPrint(di) {
+  const e = meta.totals?.[di] || {}, d = DAYS[di].date;
+  const ds = `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`;
+  const m = v => v == null ? "" : money(v);
+  const line = (n, label, mid, v) => `<div class="cl"><span>${n} ${label}</span><span>${mid}</span><span class="box">${m(v)}</span></div>`;
+  const sig = (i) => `<div class="sg"><span>Signature</span><span class="ln">${e.sigs?.[i] ? `<img src="${e.sigs[i]}" alt="">` : ""}</span><span style="text-align:right;padding-right:6px">Printed Name</span><span class="nm">${esc(e.counters?.[i] || "")}</span></div>`;
+  $("#countPrint").innerHTML = `<h1>Daily Cash Count</h1>
+    <div style="margin:0 0 20px">Date: <span style="display:inline-block;border-bottom:1px solid #000;min-width:2in;padding:0 8px;font-family:Arial">${ds}</span></div>
+    ${line(1, "Total Cash Count", "", e.cash ?? e.amount)}
+    ${line(2, "Credit Card Sales", "", e.card)}
+    ${line(3, "Starting Bank", "", e.bank)}
+    ${line(4, "Total Sales", "Line 1 + Line 2 - Line 3 &nbsp;=", e.amount)}
+    <div class="sigs"><b>Counted &amp; Verified by 2 assigned Duffers:</b>${sig(0)}${sig(1)}</div>
+    <div class="instr">Put ALL cash and this completed sheet in bank bag.<br>Tomorrow's bag will have its own new bank in it.</div>
+    <div>Worksheet Area</div>
+    <div class="ws">${BILLS.map(b => `<span>${b}'s</span><span class="v">${e.counts?.[b] != null ? `${e.counts[b]} × $${b} = ` : ""}${m(e.bills?.[b])}</span>`).join("")}
+      <span class="t">Total</span><span class="v t">${m(e.cash ?? e.amount)}</span></div>
+    <div style="margin-top:18px;font-size:9pt;color:#555">Entered in the Duffers sign-up app by ${esc(e.by || "")} · duffers-signup-app.vercel.app</div>`;
+}
+$("#ccPrint").onclick = () => {
+  buildCountPrint(moneyDay);
+  document.body.classList.add("print-count");
+  const done = () => { document.body.classList.remove("print-count"); window.removeEventListener("afterprint", done); };
+  window.addEventListener("afterprint", done);
+  setTimeout(() => window.print(), 50);
+  setTimeout(done, 60000);
 };
 /* [device] is who can take the name off again from a phone: "admin" rows only the admin can remove. */
 function addSignup(slot, name, device = deviceId) {
@@ -825,8 +1034,9 @@ $("#btnExport").onclick = () => {
     if (!names.length) lines.push(`"${fmtDay(day.date)}","${shiftTitle(s)}",""`);
     for (const n of names) lines.push(`"${fmtDay(day.date)}","${shiftTitle(s)}","${n.replace(/"/g, '""')}"`);
   }
-  lines.push("", "Day,Last year,This year,Entered by");
-  DAYS.forEach((day, di) => lines.push(`"${fmtDay(day.date)}",${lastYearFor(di) ?? ""},${meta.totals?.[di]?.amount ?? ""},"${(meta.totals?.[di]?.by || "").replace(/"/g, '""')}"`));
+  lines.push("", "Day,Last year,This year (total sales),Cash count,Card sales,Starting bank,Counted by,Entered by");
+  DAYS.forEach((day, di) => { const e = meta.totals?.[di] || {}, q = v => `"${String(v || "").replace(/"/g, '""')}"`;
+    lines.push(`"${fmtDay(day.date)}",${lastYearFor(di) ?? ""},${e.amount ?? ""},${e.cash ?? ""},${e.card ?? ""},${e.bank ?? ""},${q((e.counters || []).join(" & "))},${q(e.by)}`); });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
   a.download = `duffers_corndog_${YEAR}.csv`; a.click();

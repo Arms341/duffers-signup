@@ -15,7 +15,7 @@ headcounts, enters daily deposits, and locks the sheet.
 - **Source on disk:** `C:\Jarvis\deploy\duffers-signup\` (`index.html`, `api\cal.js`, `firestore.rules`, `SETUP.md`, `vercel.json`)
 - **Git:** `github.com/Arms341/duffers-signup` (private). Vercel project `duffers-signup-app` auto-deploys on push.
   Deploy = `cd C:\Jarvis\deploy\duffers-signup; git add -A; git commit -m "..."; git push`
-- **Stale Vercel projects to delete:** `duffers-signup`, `duffers-signup1` (folder uploads, old code).
+- Stale Vercel projects `duffers-signup` and `duffers-signup1` were deleted 09-16; only `duffers-signup-app` remains.
 - **Firebase project:** `duffers-signup` — Firestore + Anonymous Auth. Web config (public by design):
   apiKey `AIzaSyBrp5AceFhQx6UicUYyQ5dSQ9MUPTeZ9_8`, projectId `duffers-signup`, appId `1:637713852918:web:f497bd898c7ebb56063fd7`.
 - **Stack:** vanilla JS in one `index.html`, Firebase compat SDK 10.12.2, Firestore `onSnapshot` realtime
@@ -46,10 +46,25 @@ headcounts, enters daily deposits, and locks the sheet.
   Scott's corrections), **not bank records** — the page carries a disclaimer under the totals saying so.
 - GroupMe: "Khiva Lubbock Duffers" group id 27169087. Scott Blount = cash/deposits, Jeremy Jones = schedule.
 
+- **Daily Cash Count (09-16):** the green + is now the paper "Daily Cash Count" sheet, line for line: worksheet
+  by bill (1's…100's as BILL COUNTS × denomination, amount shown per line → line 1 auto-sums and locks), line 2 card sales, line 3 starting bank
+  (defaults 2000, remembers last), line 4 total sales = 1+2−3 computed. Two printed names required + two
+  finger-signature canvases (blank signature = confirm). Stored on `totals[di]` as
+  `{amount(=line 4), cash, card, bank, bills{1..100 $}, counts{1..100 bills}, counters[2], sigs[2 PNG data URLs ~8KB], by, ts}` —
+  same year doc, no rules change. Totals table shows "cash · card · counted by A & B"; CSV has the split;
+  dialog "Print" button prints a portrait replica of the paper sheet with signatures for the bank bag.
+  **Square screen photo:** dialog has "Add photo of the Square screen" (camera/file); shrunk to ≤1000px JPEG
+  (~50–150 KB) and stored in `sheets/{year}/counts/{di}` = `{photo, by, uid, ts}` — its own doc so the year
+  doc stays small; year doc only gets `totals[di].photo = true`. Totals table shows a "📷 Square screen"
+  link that fetches on tap; print includes it. **Needs the `counts` rule pasted into Firebase console.**
+  Found while testing: the 09/24/25 paper sheet's worksheet sums to 5,781 but line 1 was written 5,281 —
+  the total (6,455) used 5,781. Exactly the arithmetic the app now does.
+
 ## 4. Firestore layout and rules
 - `sheets/{year}` doc: `{locked, needs, totals, startDate}` (rules: keys hasOnly those four; published 09-15).
   Rules do NOT deploy with git push — any change to `firestore.rules` has to be pasted into Firebase console →
   Firestore → Rules → Publish.
+- `sheets/{year}/counts/{di}`: `{photo(string <900KB), by, uid, ts}` — any signed-in user writes/deletes (rule added 09-16, must be published by hand).
 - `sheets/{year}/signups/{id}`: `{slot, name, device, uid, ts}` — create needs uid match, name ≤40, not locked;
   delete by any signed-in user; no update.
 - `sheets/{year}/notes/{id}`: `{slot, name, text(≤140), device, uid, ts}`.
@@ -65,7 +80,7 @@ bars, #fff45c yellow lines, dark grey #595959 closed-time filler on Mon–Thu, o
 "Sign up online: duffers-signup-app.vercel.app" footer, closing shifts aligned across both rows) · Non-Theta
 Volunteers - If Needed block on opening Thursday · hardened lodge gate (whole page hidden until code; Escape /
 in-app browsers can't skip it) · header scrolls away on phones · **Save My Shifts To My Calendar** · reworded
-name instructions · totals disclaimer · "Running late? Add a note" tip.
+name instructions · totals disclaimer · "Running late? Add a note" tip · **Daily Cash Count** dialog with signatures + print.
 
 ## 6. Calendar
 - Button opens a dialog: iPhone → `webcal://` subscribe to `api/cal?name=...` (live, updates hourly);
@@ -90,8 +105,9 @@ name instructions · totals disclaimer · "Running late? Add a note" tip.
 - Cowork's `device_bash` was broken this session; edits went through stage/commit of whole files.
 
 ## 8. Open / to do
+- **Paste the new `firestore.rules` (adds `counts/{day}`) into Firebase console → Firestore → Rules → Publish** — photos fail with permission-denied until then.
 - ~~Re-publish `firestore.rules`~~ — confirmed 09-16 the published rules (09-15 3:34 PM) already include `startDate`.
-- Branden: delete the two stale Vercel projects.
+- ~~Delete the two stale Vercel projects~~ — done 09-16.
 - Send the link + codes to the Duffers GroupMe once he's happy.
 - After the fair: enter the 2026 deposits nightly via the green +; next year "Set opening Thursday" and
   reload names — 2026 totals become "last year" automatically.

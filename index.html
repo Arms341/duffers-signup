@@ -156,7 +156,8 @@
   #moneyDlg { width: min(94vw, 470px); max-height: 92vh; overflow-y: auto; }
   .cc-note { font-size: 12px; color: #777; font-style: italic; margin: 0 0 6px; }
   .cc-h { font-size: 12px; font-weight: 700; margin: 12px 0 4px; color: var(--maroon); text-transform: uppercase; letter-spacing: .4px; }
-  .cc-bills { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 6px 8px; align-items: center; margin: 0; font-size: 14px; }
+  .cc-bills { display: grid; grid-template-columns: 46px 1fr 1fr 92px; gap: 6px 6px; align-items: center; margin: 0; font-size: 14px; }
+  .cc-bills .hd.who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cc-bills .d { font-weight: 700; color: #444; }
   .cc-bills input { margin: 0; padding: 8px; text-align: right; }
   .cc-bills .amt { text-align: right; font-weight: 700; color: #333; font-variant-numeric: tabular-nums; }
@@ -320,15 +321,15 @@
   <p class="cc-note">Same lines as the paper sheet. Count the bills; the app does the multiplying and adding.</p>
   <div class="cc-h">Worksheet — count the bills, the app does the math</div>
   <div class="cc-bills" id="ccBills">
-    <span class="hd">Bill</span><span class="hd" style="text-align:right">How many</span><span class="hd" style="text-align:right">Amount</span>
-    <span class="d">1's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="1" placeholder="0"><span class="amt zero" data-amt="1">$0</span>
-    <span class="d">5's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="5" placeholder="0"><span class="amt zero" data-amt="5">$0</span>
-    <span class="d">10's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="10" placeholder="0"><span class="amt zero" data-amt="10">$0</span>
-    <span class="d">20's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="20" placeholder="0"><span class="amt zero" data-amt="20">$0</span>
-    <span class="d">50's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="50" placeholder="0"><span class="amt zero" data-amt="50">$0</span>
-    <span class="d">100's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="100" placeholder="0"><span class="amt zero" data-amt="100">$0</span>
+    <span class="hd">Bill</span><span class="hd who" id="ccWho0" style="text-align:right">1st counter</span><span class="hd who" id="ccWho1" style="text-align:right">2nd counter</span><span class="hd" style="text-align:right">Amount</span>
+    <span class="d">1's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="1" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="1" data-who="1" placeholder="0"><span class="amt zero" data-amt="1">$0</span>
+    <span class="d">5's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="5" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="5" data-who="1" placeholder="0"><span class="amt zero" data-amt="5">$0</span>
+    <span class="d">10's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="10" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="10" data-who="1" placeholder="0"><span class="amt zero" data-amt="10">$0</span>
+    <span class="d">20's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="20" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="20" data-who="1" placeholder="0"><span class="amt zero" data-amt="20">$0</span>
+    <span class="d">50's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="50" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="50" data-who="1" placeholder="0"><span class="amt zero" data-amt="50">$0</span>
+    <span class="d">100's</span><input type="number" inputmode="numeric" min="0" step="1" data-bill="100" data-who="0" placeholder="0"><input type="number" inputmode="numeric" min="0" step="1" data-bill="100" data-who="1" placeholder="0"><span class="amt zero" data-amt="100">$0</span>
   </div>
-  <p class="cc-note" style="margin-top:6px">Rolled coin or a strapped bundle? Count it as bills (a $100 strap of 1's = 100). No bills counted? Type the cash total on line 1 instead.</p>
+  <p class="cc-note" style="margin-top:6px">Split the cash between two counters; each puts their own count in their column and the app adds them. A strapped bundle counts as bills (a $100 strap of 1's = 100). Nobody counted by bill? Type the cash total on line 1 instead.</p>
   <div class="cc-grid">
     <span><span class="cc-n">1</span>Total Cash Count</span><input id="ccCash" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$">
     <span><span class="cc-n">2</span>Credit Card Sales</span><input id="ccCard" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$">
@@ -920,9 +921,15 @@ document.querySelectorAll("#moneyDlg [data-clear]").forEach(b => b.onclick = () 
 
 /* Worksheet -> line 1. Each line is a COUNT of bills; amount = count x denomination. While any line has a
    count, line 1 is the sum and is not typed by hand. */
-function billAmounts() {
+function billCounts() {   // { "20": [countA, countB] } for rows where anything was typed
   const out = {};
-  billInputs().forEach(i => { const c = i.value.trim(); if (c !== "" && !isNaN(+c)) out[i.dataset.bill] = Math.round(+c) * +i.dataset.bill; });
+  billInputs().forEach(i => { const c = i.value.trim(); if (c === "" || isNaN(+c)) return;
+    (out[i.dataset.bill] ||= [0, 0])[+i.dataset.who] = Math.round(+c); });
+  return out;
+}
+function billAmounts() {
+  const out = {}, bc = billCounts();
+  for (const b in bc) out[b] = (bc[b][0] + bc[b][1]) * +b;
   return out;
 }
 function syncCash() {
@@ -940,6 +947,11 @@ function ccTotal() {
 }
 function syncTotal() { const t = ccTotal(); $("#ccTotal").textContent = t == null ? "$ –" : money(t); }
 billInputs().forEach(i => i.addEventListener("input", syncCash));
+function syncWho() {
+  const n1 = $("#ccName1").value.trim(), n2 = $("#ccName2").value.trim();
+  $("#ccWho0").textContent = n1 ? n1.split(" ")[0] : "1st counter"; $("#ccWho1").textContent = n2 ? n2.split(" ")[0] : "2nd counter";
+}
+$("#ccName1").addEventListener("input", syncWho); $("#ccName2").addEventListener("input", syncWho);
 ["#ccCash", "#ccCard", "#ccBank"].forEach(sel => $(sel).addEventListener("input", syncTotal));
 
 /* Photo of the Square totals screen. Shrunk in the browser to ~1000px JPEG (~100 KB) and kept in its own
@@ -995,7 +1007,9 @@ function openMoney(di) {
   moneyDay = di;
   const e = meta.totals?.[di] || {};
   $("#moneyTitle").textContent = `Daily Cash Count — ${fmtDay(DAYS[di].date)}`;
-  billInputs().forEach(i => i.value = e.counts?.[i.dataset.bill] ?? "");
+  billInputs().forEach(i => { const b = i.dataset.bill, w = +i.dataset.who;
+    i.value = e.split?.[b] ? (e.split[b][w] || "") : (w === 0 ? (e.counts?.[b] ?? "") : ""); });
+  syncWho();
   $("#ccCash").value = e.cash ?? e.amount ?? "";
   $("#ccCard").value = e.card ?? "";
   let bank = e.bank; if (bank == null) { try { bank = localStorage.getItem("duffers.bank"); } catch (x) {} }
@@ -1027,17 +1041,17 @@ $("#moneyOk").onclick = async () => {
     if (!n1 || !n2) { err.textContent = "Two Duffers have to count and print their names."; err.hidden = false; return; }
     if (pads[0].isEmpty() || pads[1].isEmpty()) { if (!confirm("A signature is blank. Save anyway?")) return; }
     var FV = firebase.firestore.FieldValue;
-    const bills = billAmounts(), counts = {};
-    billInputs().forEach(i => { if (i.value.trim() !== "") counts[i.dataset.bill] = Math.round(+i.value); });
+    const bills = billAmounts(), split = billCounts(), counts = {};
+    for (const b in split) counts[b] = split[b][0] + split[b][1];
     Object.assign(entry, {
       amount: total, cash: num("#ccCash") ?? 0, card: num("#ccCard") ?? 0, bank: num("#ccBank") ?? 0,
-      bills, counts, counters: [n1, n2], sigs: [pads[0].data(), pads[1].data()], by: myName, ts: FV.serverTimestamp()
+      bills, counts, split, counters: [n1, n2], sigs: [pads[0].data(), pads[1].data()], by: myName, ts: FV.serverTimestamp()
     });
     try { localStorage.setItem("duffers.bank", String(entry.bank)); } catch (x) {}
   } else {
     // everything blank = clear the day
     var FV = firebase.firestore.FieldValue;
-    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
+    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "split", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
   }
   if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
   try {
@@ -1054,7 +1068,7 @@ $("#moneyOk").onclick = async () => {
 $("#ccClear").onclick = async () => {
   if (!confirm(`Clear the whole count for ${fmtDay(DAYS[moneyDay].date)}? Numbers, signatures and the photo will be removed.`)) return;
   const FV = firebase.firestore.FieldValue, entry = {};
-  for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
+  for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "split", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
   try {
     await countsDoc(moneyDay).delete().catch(() => {});
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
@@ -1071,7 +1085,7 @@ async function countCard(di) {
   const W = 1080, P = 48, rowH = 74;
   const rows = [["1  Total Cash Count", e.cash ?? e.amount], ["2  Credit Card Sales", e.card], ["3  Starting Bank", e.bank]];
   const bills = BILLS.filter(b => e.counts?.[b] != null);
-  const billsLine = bills.length ? bills.map(b => `${e.counts[b]}×$${b}`).join("   ") : "";
+  const billsLine = bills.length ? bills.map(b => `${e.split?.[b] ? `${e.split[b][0]}+${e.split[b][1]}` : e.counts[b]}×$${b}`).join("   ") : "";
   const phH = ph ? Math.min(1500, Math.round((W - 2 * P) * ph.height / ph.width)) : 0;
   const H = 170 + rows.length * rowH + 110 + (billsLine ? 50 : 0) + 210 + (ph ? phH + 70 : 0) + 60;
   const c = document.createElement("canvas"); c.width = W; c.height = H;

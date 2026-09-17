@@ -47,7 +47,9 @@ headcounts, enters daily deposits, and locks the sheet.
 - GroupMe: "Khiva Lubbock Duffers" group id 27169087. Scott Blount = cash/deposits, Jeremy Jones = schedule.
 
 - **Daily Cash Count (09-16):** the green + is now the paper "Daily Cash Count" sheet, line for line: worksheet
-  by bill (1's…100's as BILL COUNTS × denomination, amount shown per line → line 1 auto-sums and locks), line 2 card sales, line 3 starting bank
+  by bill (1's…100's as BILL COUNTS × denomination — TWO count columns, one per counter, headed by the
+  counters' first names; the two cash piles are split, not double-counted; stored as `split{b:[a,b]}` plus
+  summed `counts` → amount per line → line 1 auto-sums and locks), line 2 card sales, line 3 starting bank
   (defaults 2000, remembers last), line 4 total sales = 1+2−3 computed. Two printed names required + two
   finger-signature canvases (blank signature = confirm). Stored on `totals[di]` as
   `{amount(=line 4), cash, card, bank, bills{1..100 $}, counts{1..100 bills}, counters[2], sigs[2 PNG data URLs ~8KB], by, ts}` —
@@ -96,7 +98,7 @@ name instructions · totals disclaimer · "Running late? Add a note" tip · **Da
 - **Home-screen guide** (`guide/ios-1..3.jpg` = Branden's real iPhone screenshots cropped with red circles;
   `guide/and-1..3.jpg` = drawn Android mock-ups): nudge has "Show me how", footer has "📲 Add to home screen";
   dialog with iPhone/Android tabs, auto-picks by user agent.
-- Branden said NO "need a sub" feature — don't build one.
+- Branden said NO "need a sub" feature — don't build one. Also rejected (09-17): "tap your name" chips in the header — built, shown, not deployed, reverted. Also no general-purpose calculator on the count sheet — the two count columns are the calculator.
 
 ## 6. Calendar
 - Button opens a dialog: iPhone → `webcal://` subscribe to `api/cal?name=...` (live, updates hourly);

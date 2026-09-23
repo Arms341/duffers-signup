@@ -245,8 +245,6 @@
     .notes .n { font-size: 15px; } .notes .n .when { font-size: 12px; }
     .notes input { font-size: 16px; padding: 10px 12px; } .notes button { font-size: 15px; padding: 10px 14px; }
     footer { font-size: 13px; flex-wrap: wrap; } footer button { font-size: 14px; }
-    footer > span:last-child { display: flex; gap: 14px; align-items: center; white-space: nowrap; }
-    footer #liveText { display: none; }   /* the green dot says it; the words don't fit next to the links */
     .locked-banner { font-size: 15px; }
   }
 </style>
@@ -261,12 +259,14 @@
     <button id="saveName">Save</button>
     <button id="btnPrint" class="btn ghost" title="Print the sheet the way the paper looks">🖨 Print</button>
     <button id="btnCal" class="btn ghost" title="Put the shifts you signed up for on your phone's calendar">📅 Save My Shifts To My Calendar</button>
+    <button id="btnGuide" class="btn ghost" title="Put this app on your phone's home screen">📲 Add Duffers Fair App to Phone</button>
   </div>
   <details class="howto" id="howto"><summary>Instructions — tap to open</summary>
     <ol>
       <li><b>Type your name</b> in the box above, the way the crew knows you, then tap <b>Save</b>. Already on a shift below? Type it <b>exactly</b> the way it's written there (if it says <i>Paden Watson</i>, type <i>Paden Watson</i>, not <i>Paden</i>) so the app can find your shifts.</li>
       <li>Tap <b>+ Sign me up</b> on each shift you'll work. Fill the <b>yellow</b> slots first.</li>
       <li>When you're done, tap <b>📅 Save My Shifts To My Calendar</b> so your phone reminds you.</li>
+      <li>Tap <b>📲 Add Duffers Fair App to Phone</b> and follow the pictures — then it opens from your home screen like an app.</li>
       <li>Running late or need to tell the crew something? Add a <b>note</b> under that shift.</li>
     </ol>
   </details>
@@ -395,7 +395,7 @@
 
 <footer>
   <span><span class="live" id="live"></span><span id="liveText">connecting…</span></span>
-  <span><button class="glink" id="btnGuide">📲 Add Duffers Fair App to homescreen</button><button id="btnAdmin">Admin</button></span>
+  <button id="btnAdmin">Admin</button>
 </footer>
 
 <div id="printSheet"></div>

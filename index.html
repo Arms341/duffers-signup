@@ -177,7 +177,8 @@
     border-radius: 8px; padding: 8px 12px; margin: 8px 0 2px; font-weight: 700; font-size: 14px; }
   .cc-total small { font-weight: 400; color: #666; }
   .cc-total b { font-size: 24px; }
-  .cc-err { color: #a33; font-size: 13px; font-weight: 600; margin: 6px 0 0; }
+  .cc-err { color: #a33; font-size: 14px; font-weight: 600; margin: 6px 0 0; background: #fde2e2; border: 1px solid #e5a0a0; border-radius: 8px; padding: 8px 10px; }
+  #moneyDlg .bad { border-color: #d33 !important; box-shadow: 0 0 0 2px rgba(221,51,51,.25); background: #fff5f5; }
   .sig { border: 1px solid #bbb; border-radius: 8px; background: #fff; width: 100%; height: 110px; touch-action: none; display: block; margin-top: 4px; }
   .sig-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #888; margin: 2px 0 6px; }
   .sig-row button { background: none; border: 0; color: #a33; font-size: 13px; cursor: pointer; padding: 0; }
@@ -784,11 +785,13 @@ function renderTotals() {
 }
 /* Small grey line under a day's total: cash / card split and who counted it. */
 function countBy(e) {
-  if (!e || e.amount == null) return "";
+  if (!e) return "";
   const bits = [];
-  if (e.cash != null || e.card != null) bits.push(`cash ${money(e.cash || 0)} · card ${money(e.card || 0)}`);
-  if (e.counters?.length) bits.push(`counted by ${e.counters.filter(Boolean).map(esc).join(" & ")}`);
-  else if (e.by) bits.push(`by ${esc(e.by)}`);
+  if (e.amount != null) {
+    if (e.cash != null || e.card != null) bits.push(`cash ${money(e.cash || 0)} · card ${money(e.card || 0)}`);
+    if (e.counters?.length) bits.push(`counted by ${e.counters.filter(Boolean).map(esc).join(" & ")}`);
+    else if (e.by) bits.push(`by ${esc(e.by)}`);
+  }
   if (e.photo) bits.push(`<a href="#" data-photo="${e._di}">📷 Square screen</a>`);
   return bits.length ? `<span class="by">${bits.join(" · ")}</span>` : "";
 }
@@ -994,12 +997,29 @@ function showPhoto() {
   $("#ccPhotoBtn").textContent = has ? "📷 Retake / replace photo" : "📷 Add photo of the Square screen";
 }
 $("#ccPhotoBtn").onclick = () => $("#ccPhotoIn").click();
+/* The photo saves the moment it's taken — it does not wait for the Save button, so whoever grabs the
+   Square screen (even someone other than the counters, even later) can't lose it to a missing field. */
 $("#ccPhotoIn").onchange = async () => {
   const f = $("#ccPhotoIn").files[0]; $("#ccPhotoIn").value = ""; if (!f) return;
-  try { photoState = { data: await shrinkImage(f), changed: true }; showPhoto(); }
-  catch (e) { $("#ccErr").textContent = e.message; $("#ccErr").hidden = false; }
+  const note = $("#ccPhotoNote"), di = moneyDay;
+  try {
+    note.textContent = "Saving photo…"; note.hidden = false;
+    const data = await shrinkImage(f);
+    await countsDoc(di).set({ photo: data, by: myName, uid, ts: firebase.firestore.FieldValue.serverTimestamp() });
+    await sheet().set({ totals: { [di]: { photo: true } } }, { merge: true });
+    if (moneyDay === di) { photoState = { data, changed: false }; showPhoto(); }
+    note.textContent = "Photo saved ✓"; setTimeout(() => { if (note.textContent === "Photo saved ✓") note.hidden = true; }, 2500);
+  } catch (e) { note.hidden = true; $("#ccErr").textContent = "Photo did not save: " + e.message; $("#ccErr").hidden = false; }
 };
-$("#ccPhotoRm").onclick = () => { photoState = { data: null, changed: true }; showPhoto(); };
+$("#ccPhotoRm").onclick = async () => {
+  if (!confirm("Remove the Square photo for this night?")) return;
+  const di = moneyDay;
+  try {
+    await countsDoc(di).delete().catch(() => {});
+    await sheet().set({ totals: { [di]: { photo: firebase.firestore.FieldValue.delete() } } }, { merge: true });
+    if (moneyDay === di) { photoState = { data: null, changed: false }; showPhoto(); }
+  } catch (e) { $("#ccErr").textContent = "Could not remove the photo: " + e.message; $("#ccErr").hidden = false; }
+};
 async function loadPhoto(di) {
   const d = await countsDoc(di).get();
   return d.exists ? (d.data().photo || null) : null;
@@ -1043,15 +1063,25 @@ function openMoney(di) {
   setTimeout(() => { pads[0].load(e.sigs?.[0]); pads[1].load(e.sigs?.[1]); }, 30);
 }
 $("#moneyCancel").onclick = () => $("#moneyDlg").close();
+function ccFail(msg, fields) {
+  const err = $("#ccErr"); err.textContent = msg; err.hidden = false;
+  fields.forEach(sel => $(sel).classList.add("bad"));
+  err.scrollIntoView({ behavior: "smooth", block: "nearest" });   // the message sits by the Save button; the fields are outlined red
+}
 $("#moneyOk").onclick = async () => {
   const entry = {}, err = $("#ccErr");
   const total = ccTotal(), ly = $("#lyIn").value.trim();
   const n1 = $("#ccName1").value.trim(), n2 = $("#ccName2").value.trim();
-  err.hidden = true;
+  err.hidden = true; document.querySelectorAll("#moneyDlg .bad").forEach(el => el.classList.remove("bad"));
   if (total != null) {
-    if (total < 0) { err.textContent = "Total sales came out negative — check the starting bank."; err.hidden = false; return; }
-    if (!n1 || !n2) { err.textContent = "Two Duffers have to count and print their names."; err.hidden = false; return; }
-    if (pads[0].isEmpty() || pads[1].isEmpty()) { if (!confirm("A signature is blank. Save anyway?")) return; }
+    if (total < 0) { ccFail("Total sales came out negative — check the starting bank.", ["#ccBank"]); return; }
+    const missing = [], fields = [];
+    if (num("#ccCard") == null) { missing.push("credit card sales (line 2 — type 0 if none)"); fields.push("#ccCard"); }
+    if (!n1) { missing.push("1st counter's printed name"); fields.push("#ccName1"); }
+    if (!n2) { missing.push("2nd counter's printed name"); fields.push("#ccName2"); }
+    if (pads[0].isEmpty()) { missing.push("1st signature"); fields.push("#ccSig1"); }
+    if (pads[1].isEmpty()) { missing.push("2nd signature"); fields.push("#ccSig2"); }
+    if (missing.length) { ccFail("Not saved — still need: " + missing.join(", ") + ".", fields); return; }
     var FV = firebase.firestore.FieldValue;
     const bills = billAmounts(), split = billCounts(), counts = {};
     for (const b in split) counts[b] = split[b][0] + split[b][1];
@@ -1061,16 +1091,12 @@ $("#moneyOk").onclick = async () => {
     });
     try { localStorage.setItem("duffers.bank", String(entry.bank)); } catch (x) {}
   } else {
-    // everything blank = clear the day
+    // numbers all blank = clear the count (the photo is its own thing; "Clear day" or Remove photo handles it)
     var FV = firebase.firestore.FieldValue;
-    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "split", "counters", "sigs", "by", "ts", "photo"]) entry[k] = FV.delete();
+    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "split", "counters", "sigs", "by", "ts"]) entry[k] = FV.delete();
   }
   if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
   try {
-    if (photoState.changed) {
-      if (photoState.data) { await countsDoc(moneyDay).set({ photo: photoState.data, by: myName, uid, ts: firebase.firestore.FieldValue.serverTimestamp() }); entry.photo = true; }
-      else { await countsDoc(moneyDay).delete().catch(() => {}); entry.photo = firebase.firestore.FieldValue.delete(); }
-    } else if (total == null) { await countsDoc(moneyDay).delete().catch(() => {}); }
     await sheet().set({ totals: { [moneyDay]: entry } }, { merge: true });
     $("#moneyDlg").close();
   } catch (err2) { showErr("Could not save the count: " + err2.message); }

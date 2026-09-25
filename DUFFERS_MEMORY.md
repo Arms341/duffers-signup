@@ -64,6 +64,13 @@ headcounts, enters daily deposits, and locks the sheet.
   Found while testing: the 09/24/25 paper sheet's worksheet sums to 5,781 but line 1 was written 5,281 —
   the total (6,455) used 5,781. Exactly the arithmetic the app now does.
 
+- **Opening night 09-24 lesson:** the closers left without the Square photo; Branden went back, took it, hit Save
+  on his phone with the count fields empty → validation refused and the photo was lost. Fix (09-25): the photo
+  writes to Firestore the moment it's taken (its own doc + `photo:true` flag), independent of Save; Save now lists
+  every missing field by name in a red box and outlines the fields; names + both signatures + card sales are
+  required; a blank-numbers Save never deletes the photo (only Remove photo / Clear day do); the 📷 link in the
+  totals table shows even before a count exists.
+
 ## 4. Firestore layout and rules
 - `sheets/{year}` doc: `{locked, needs, totals, startDate}` (rules: keys hasOnly those four; published 09-15).
   Rules do NOT deploy with git push — any change to `firestore.rules` has to be pasted into Firebase console →

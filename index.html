@@ -1073,9 +1073,10 @@ $("#moneyOk").onclick = async () => {
   const total = ccTotal(), ly = $("#lyIn").value.trim();
   const n1 = $("#ccName1").value.trim(), n2 = $("#ccName2").value.trim();
   err.hidden = true; document.querySelectorAll("#moneyDlg .bad").forEach(el => el.classList.remove("bad"));
-  if (total != null) {
-    if (total < 0) { ccFail("Total sales came out negative — check the starting bank.", ["#ccBank"]); return; }
+  {
+    if (total != null && total < 0) { ccFail("Total sales came out negative — check the starting bank.", ["#ccBank"]); return; }
     const missing = [], fields = [];
+    if (num("#ccCash") == null) { missing.push("the cash count (count the bills above, or type the total on line 1)"); fields.push("#ccCash"); }
     if (num("#ccCard") == null) { missing.push("credit card sales (line 2 — type 0 if none)"); fields.push("#ccCard"); }
     if (!n1) { missing.push("1st counter's printed name"); fields.push("#ccName1"); }
     if (!n2) { missing.push("2nd counter's printed name"); fields.push("#ccName2"); }
@@ -1090,10 +1091,6 @@ $("#moneyOk").onclick = async () => {
       bills, counts, split, counters: [n1, n2], sigs: [pads[0].data(), pads[1].data()], by: myName, ts: FV.serverTimestamp()
     });
     try { localStorage.setItem("duffers.bank", String(entry.bank)); } catch (x) {}
-  } else {
-    // numbers all blank = clear the count (the photo is its own thing; "Clear day" or Remove photo handles it)
-    var FV = firebase.firestore.FieldValue;
-    for (const k of ["amount", "cash", "card", "bank", "bills", "counts", "split", "counters", "sigs", "by", "ts"]) entry[k] = FV.delete();
   }
   if (!$("#lyWrap").hidden) entry.lastYear = ly !== "" ? +ly : FV.delete();
   try {

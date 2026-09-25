@@ -68,7 +68,7 @@ headcounts, enters daily deposits, and locks the sheet.
   on his phone with the count fields empty → validation refused and the photo was lost. Fix (09-25): the photo
   writes to Firestore the moment it's taken (its own doc + `photo:true` flag), independent of Save; Save now lists
   every missing field by name in a red box and outlines the fields; names + both signatures + card sales are
-  required; a blank-numbers Save never deletes the photo (only Remove photo / Clear day do); the 📷 link in the
+  required; Save ALWAYS validates — an empty Save lists everything missing (cash count, card, names, sigs) and writes nothing; only Remove photo / Clear day delete anything; the 📷 link in the
   totals table shows even before a count exists.
 
 ## 4. Firestore layout and rules
